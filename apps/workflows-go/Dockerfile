@@ -1,0 +1,17 @@
+FROM golang:1.24.2-alpine AS builder
+
+WORKDIR /app
+
+COPY . .
+RUN go build -o workflows-go main.go
+
+FROM alpine:3.19.0
+COPY --from=builder /app/workflows-go /app/workflows-go
+
+# Set the default port
+ENV APP_PORT=6006
+
+# Expose the port
+EXPOSE 6006
+
+CMD ["/app/workflows-go"]

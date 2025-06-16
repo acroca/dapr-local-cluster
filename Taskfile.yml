@@ -1,0 +1,26 @@
+version: 3
+
+tasks:
+  cluster-up:
+    desc: Start everything (registry, cluster)
+    cmds:
+      - docker run -d --restart=always -p "127.0.0.1:5001:5000" --network bridge --name "kind-registry" registry:2.7 || true
+      - ./tilt/cluster-up.sh
+
+  cluster-down:
+    desc: Stop everything (cluster, registry)
+    cmds:
+      - kind delete cluster
+      - docker rm -f kind-registry || true
+
+  cluster-rebuild:
+    desc: Rebuild everything (down then up)
+    cmds:
+      - task: cluster-down
+      - task: cluster-up
+
+  tilt-up:
+    desc: Run Tilt
+    cmds:
+      - tilt up
+

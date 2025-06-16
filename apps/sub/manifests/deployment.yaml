@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sub
+  labels:
+    app: sub
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: sub
+  template:
+    metadata:
+      labels:
+        app: sub
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "sub"
+        dapr.io/app-port: "6005"
+        dapr.io/app-protocol: "grpc"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: sub
+        image: localhost:5001/sub:latest
+        ports:
+        - containerPort: 6005
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

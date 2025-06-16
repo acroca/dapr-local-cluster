@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflows-py
+  labels:
+    app: workflows-py
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: workflows-py
+  template:
+    metadata:
+      labels:
+        app: workflows-py
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "workflows-py"
+        dapr.io/app-port: "6005"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-app-health-check: "true"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: workflows-py
+        image: localhost:5001/workflows-py:latest
+        ports:
+        - containerPort: 6005
+        env:
+        - name: APP_PORT
+          value: "6005"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

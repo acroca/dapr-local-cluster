@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflows-go
+  labels:
+    app: workflows-go
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: workflows-go
+  template:
+    metadata:
+      labels:
+        app: workflows-go
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "workflows-go"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: workflows-go
+        image: localhost:5001/workflows-go:latest
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

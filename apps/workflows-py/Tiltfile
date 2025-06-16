@@ -1,0 +1,13 @@
+load('ext://uibutton', 'cmd_button')
+
+# Workflows service (Python)
+docker_build('localhost:5001/workflows-py', '.')
+k8s_yaml('manifests/deployment.yaml')
+k8s_resource(workload='workflows-py', resource_deps=['dapr'], labels=['apps'], port_forwards=['6005:6005'])
+
+cmd_button('workflows-py:start',
+            argv=['sh', '-c', 'curl --silent -X POST http://localhost:6005/start'],
+            resource='workflows-py',
+            icon_name='cloud_download',
+            text='start workflow',
+)

@@ -1,0 +1,5 @@
+# Subscriber service (Python)
+docker_build('localhost:5001/pub', '.')
+k8s_yaml('manifests/deployment.yaml')
+k8s_resource(workload='pub', resource_deps=['pubsub'], labels=['apps'])
+
