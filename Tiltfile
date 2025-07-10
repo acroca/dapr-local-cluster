@@ -1,13 +1,20 @@
 # Load Helm extension
 load('ext://helm_resource', 'helm_resource', 'helm_repo')
 
-# Redis deployment using Helm
 helm_repo('bitnami', 'https://charts.bitnami.com/bitnami')
 helm_resource('redis', 'bitnami/redis',
              namespace='default',
              flags=['--set', 'auth.enabled=false'],
+             resource_deps=['bitnami'],
              labels=['core'])
 
+helm_repo('openzipkin', 'https://zipkin.io/zipkin-helm')
+helm_resource('zipkin', 'openzipkin/zipkin',
+             namespace='default',
+             flags=['--set', 'zipkin.storage.type=mem'],
+             resource_deps=['openzipkin'],
+             labels=['core'],
+             port_forwards=['9411:9411'])
 
 dapr_version = "dev"
 
@@ -29,14 +36,18 @@ if dapr_version == "dev":
                 },
                 labels=['core'])
 else:
+  runtime_version = "latest"
   local_resource('dapr',
                 cmd='''
                   mise exec dapr@%s -- dapr uninstall -k -n default && \
-                  mise exec dapr@%s -- dapr init -k -n default
-                ''' % (dapr_version, dapr_version),
+                  mise exec dapr@%s -- dapr init -k -n default --runtime-version %s --wait
+                ''' % (dapr_version, dapr_version, runtime_version),
                 labels=['core'])
 
+k8s_kind('Configuration')
 k8s_kind('Component')
+k8s_yaml("manifests/config.yaml")
+k8s_resource(workload='daprconfig', resource_deps=['dapr'], labels=['core'], pod_readiness="ignore")
 k8s_yaml("manifests/component_pubsub.yaml")
 k8s_resource(workload='pubsub', resource_deps=['dapr', 'redis'], labels=['core'], pod_readiness="ignore")
 k8s_yaml("manifests/component_state.yaml")
