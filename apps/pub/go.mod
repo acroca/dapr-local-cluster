@@ -1,6 +1,6 @@
 module github.com/acroca/dapr-example-app
 
-go 1.24.2
+go 1.24.4
 
 require (
 	github.com/dapr/dapr v1.15.0-rc.17 // indirect

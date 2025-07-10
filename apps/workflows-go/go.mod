@@ -1,6 +1,6 @@
 module github.com/acroca/dapr-example-app
 
-go 1.24.2
+go 1.24.4
 
 require github.com/dapr/go-sdk v1.12.0
 
