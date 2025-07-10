@@ -13,3 +13,8 @@ spec:
     value: ""
   - name: actorStateStore
     value: "true"
+scopes:
+  - multiapp-1
+  - multiapp-2
+  - multiapp-3
+  - multiapp-4

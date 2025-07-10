@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multiapp-4
+  namespace: bleedingedge
+  labels:
+    app: multiapp-4
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: multiapp-4
+  template:
+    metadata:
+      labels:
+        app: multiapp-4
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "multiapp-4"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: multiapp-4
+        image: localhost:5001/multiapp:latest
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

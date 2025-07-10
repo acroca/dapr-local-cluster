@@ -1,0 +1,19 @@
+load('ext://uibutton', 'cmd_button')
+
+# Multiapp service (Go)
+docker_build('localhost:5001/multiapp', '../../..', dockerfile='Dockerfile', only=['local-cluster/apps/multiapp/', 'durabletask-go', 'go-sdk'])
+k8s_yaml('manifests/deployment1.yaml')
+k8s_yaml('manifests/deployment2.yaml')
+k8s_yaml('manifests/deployment3.yaml')
+k8s_yaml('manifests/deployment4.yaml')
+k8s_resource(workload='multiapp-1', resource_deps=['dapr'], labels=['apps'], port_forwards=['6007:6007'])
+k8s_resource(workload='multiapp-2', resource_deps=['dapr'], labels=['apps'], port_forwards=['6008:6007'])
+k8s_resource(workload='multiapp-3', resource_deps=['dapr'], labels=['apps'], port_forwards=['6009:6007'])
+k8s_resource(workload='multiapp-4', resource_deps=['dapr'], labels=['apps'], port_forwards=['6010:6007'])
+
+cmd_button('multiapp:start',
+            argv=['sh', '-c', 'curl --silent -X POST http://localhost:6007/start'],
+            resource='multiapp-1',
+            icon_name='cloud_download',
+            text='start workflow',
+)
