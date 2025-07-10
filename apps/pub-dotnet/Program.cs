@@ -16,9 +16,6 @@ using var client = new DaprClientBuilder().Build();
 //     {
 //       await client.PublishEventAsync("pubsub", "numbers", order);
 //       Console.WriteLine("Published data: " + order);
-//       await Task.Delay(TimeSpan.FromSeconds(1));
-//       await client.PublishEventAsync("pubsub", "numbers", order);
-//       Console.WriteLine("Published data: " + order);
 //     }
 
 //     await Task.Delay(TimeSpan.FromSeconds(1));
