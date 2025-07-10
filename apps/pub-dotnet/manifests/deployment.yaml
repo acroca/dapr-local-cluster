@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pub-dotnet
+  labels:
+    app: pub-dotnet
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: pub-dotnet
+  template:
+    metadata:
+      labels:
+        app: pub-dotnet
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "pub-dotnet"
+        dapr.io/config: "daprconfig"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: pub
+        image: localhost:5001/pub-dotnet:latest
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"
