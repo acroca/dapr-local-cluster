@@ -1,29 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pub
+  name: workflows-stress
   labels:
-    app: pub
+    app: workflows-stress
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: pub
+      app: workflows-stress
   template:
     metadata:
       labels:
-        app: pub
+        app: workflows-stress
       annotations:
         dapr.io/enabled: "true"
-        dapr.io/app-id: "pub"
-        dapr.io/config: "daprconfig"
+        dapr.io/app-id: "workflows-stress"
     spec:
       terminationGracePeriodSeconds: 0
       containers:
-      - name: pub
-        image: localhost:5001/pub:latest
+      - name: workflows-stress
+        image: localhost:5001/workflows-stress:latest
         resources:
           limits:
             cpu: "0.5"

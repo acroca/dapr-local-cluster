@@ -4,7 +4,14 @@ load('ext://helm_resource', 'helm_resource', 'helm_repo')
 helm_repo('bitnami', 'https://charts.bitnami.com/bitnami')
 helm_resource('redis', 'bitnami/redis',
              namespace='default',
-             flags=['--set', 'auth.enabled=false'],
+             flags=[
+                '--set', 'architecture=standalone',
+                '--set', 'auth.enabled=false',
+                '--set', 'master.resources.requests.memory=512Mi',
+                '--set', 'master.resources.requests.cpu=200m',
+                '--set', 'master.resources.limits.memory=1024Mi',
+                '--set', 'master.resources.limits.cpu=200m'
+              ],
              resource_deps=['bitnami'],
              labels=['core'])
 
@@ -37,6 +44,8 @@ if dapr_version == "dev":
                 labels=['core'])
 else:
   runtime_version = "latest"
+  # runtime_version = "1.13.6"
+  # runtime_version = "1.14.4"
   local_resource('dapr',
                 cmd='''
                   mise exec dapr@%s -- dapr uninstall -k -n default && \
@@ -57,3 +66,4 @@ load_dynamic('apps/pub/Tiltfile')
 load_dynamic('apps/sub/Tiltfile')
 load_dynamic('apps/workflows-py/Tiltfile')
 load_dynamic('apps/workflows-go/Tiltfile')
+# load_dynamic('apps/workflows-stress/Tiltfile')
