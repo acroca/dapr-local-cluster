@@ -24,6 +24,7 @@ helm_resource('zipkin', 'openzipkin/zipkin',
              port_forwards=['9411:9411'])
 
 dapr_version = "dev"
+# dapr_version = "1.15"
 
 if dapr_version == "dev":
   local_resource('dapr',
@@ -43,9 +44,10 @@ if dapr_version == "dev":
                 },
                 labels=['core'])
 else:
-  runtime_version = "latest"
+  # runtime_version = "latest"
   # runtime_version = "1.13.6"
   # runtime_version = "1.14.4"
+  runtime_version = "1.16.0-rc.1"
   local_resource('dapr',
                 cmd='''
                   mise exec dapr@%s -- dapr uninstall -k -n default && \
@@ -62,8 +64,8 @@ k8s_resource(workload='pubsub', resource_deps=['dapr', 'redis'], labels=['core']
 k8s_yaml("manifests/component_state.yaml")
 k8s_resource(workload='statestore', resource_deps=['dapr', 'redis'], labels=['core'], pod_readiness="ignore")
 
-load_dynamic('apps/pub/Tiltfile')
-load_dynamic('apps/sub/Tiltfile')
-load_dynamic('apps/workflows-py/Tiltfile')
+# load_dynamic('apps/pub/Tiltfile')
+# load_dynamic('apps/sub/Tiltfile')
+# load_dynamic('apps/workflows-py/Tiltfile')
 load_dynamic('apps/workflows-go/Tiltfile')
 # load_dynamic('apps/workflows-stress/Tiltfile')

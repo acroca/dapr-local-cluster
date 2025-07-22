@@ -72,7 +72,7 @@ func startWorkflowHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Starting workflow with input: %s", workflowInput)
 
 	// Start workflow
-	id, err := wfClient.ScheduleNewWorkflow(context.Background(), "TestWorkflow", workflow.WithInput(workflowInput))
+	id, err := wfClient.ScheduleNewWorkflow(context.Background(), "TestWorkflowParent", workflow.WithInput(workflowInput))
 	if err != nil {
 		log.Printf("Error starting workflow: %v", err)
 		response := WorkflowResponse{
@@ -163,7 +163,10 @@ func main() {
 		log.Fatalf("failed to start worker: %v", err)
 	}
 
-	if err := w.RegisterWorkflow(TestWorkflow); err != nil {
+	if err := w.RegisterWorkflow(TestWorkflowParent); err != nil {
+		log.Fatal(err)
+	}
+	if err := w.RegisterWorkflow(TestWorkflowChild); err != nil {
 		log.Fatal(err)
 	}
 	if err := w.RegisterActivity(TestActivity); err != nil {
@@ -202,13 +205,22 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+appPort, nil))
 }
 
-func TestWorkflow(ctx *workflow.WorkflowContext) (any, error) {
+func TestWorkflowParent(ctx *workflow.WorkflowContext) (any, error) {
+	var number int
+	err := ctx.CallChildWorkflow(TestWorkflowChild).Await(&number)
+	if err != nil {
+		return nil, err
+	}
+	return "Workflow completed with number: " + strconv.Itoa(number), nil
+}
+
+func TestWorkflowChild(ctx *workflow.WorkflowContext) (any, error) {
 	var number int
 	err := ctx.CallActivity(TestActivity).Await(&number)
 	if err != nil {
 		return nil, err
 	}
-	return "Workflow completed with number: " + strconv.Itoa(number), nil
+	return number, nil
 }
 
 func TestActivity(ctx workflow.ActivityContext) (any, error) {
