@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-agent-workflow-hobbit
+  labels:
+    app: multi-agent-workflow-hobbit
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: multi-agent-workflow-hobbit
+  template:
+    metadata:
+      labels:
+        app: multi-agent-workflow-hobbit
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "multi-agent-workflow-hobbit"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: hobbit
+        image: localhost:5001/multi-agent-workflow-hobbit:latest
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

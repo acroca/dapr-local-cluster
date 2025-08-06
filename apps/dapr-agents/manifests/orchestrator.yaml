@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-agent-workflow-orchestrator
+  labels:
+    app: multi-agent-workflow-orchestrator
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: multi-agent-workflow-orchestrator
+  template:
+    metadata:
+      labels:
+        app: multi-agent-workflow-orchestrator
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "multi-agent-workflow-orchestrator"
+        dapr.io/app-port: "8004"
+        dapr.io/enable-app-health-check: "true"
+        dapr.io/app-health-check-path: "/status"
+        dapr.io/log-level: "debug"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: orchestrator
+        image: localhost:5001/multi-agent-workflow-orchestrator:latest
+        ports:
+        - containerPort: 8004
+        env:
+        - name: APP_PORT
+          value: "8004"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

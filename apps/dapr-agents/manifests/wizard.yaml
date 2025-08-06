@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-agent-workflow-wizard
+  labels:
+    app: multi-agent-workflow-wizard
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: multi-agent-workflow-wizard
+  template:
+    metadata:
+      labels:
+        app: multi-agent-workflow-wizard
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "multi-agent-workflow-wizard"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: wizard
+        image: localhost:5001/multi-agent-workflow-wizard:latest
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

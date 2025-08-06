@@ -8,9 +8,7 @@ import sys
 import threading
 
 from flask import Flask, request, jsonify
-from dapr.clients import DaprClient
-from dapr.conf import settings
-from dapr.ext.workflow import DaprWorkflowClient, WorkflowStatus, WorkflowRuntime, DaprWorkflowContext, WorkflowActivityContext
+from dapr.ext.workflow import DaprWorkflowClient, WorkflowRuntime, DaprWorkflowContext, WorkflowActivityContext
 
 workflow_name = "test_workflow"
 workflow_runtime = WorkflowRuntime()

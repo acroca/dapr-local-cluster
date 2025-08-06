@@ -1,0 +1,24 @@
+load('ext://uibutton', 'cmd_button')
+
+docker_build('localhost:5001/multi-agent-workflow-elf', './elf')
+docker_build('localhost:5001/multi-agent-workflow-hobbit', './hobbit')
+docker_build('localhost:5001/multi-agent-workflow-wizard', './wizard')
+docker_build('localhost:5001/multi-agent-workflow-orchestrator', './workflow-orchestrator')
+
+k8s_yaml('manifests/elf.yaml')
+k8s_yaml('manifests/hobbit.yaml')
+k8s_yaml('manifests/wizard.yaml')
+k8s_resource(workload='multi-agent-workflow-elf', new_name="elf", resource_deps=['dapr'], labels=['apps'])
+k8s_resource(workload='multi-agent-workflow-hobbit', new_name="hobbit", resource_deps=['dapr'], labels=['apps'])
+k8s_resource(workload='multi-agent-workflow-wizard', new_name="wizard", resource_deps=['dapr'], labels=['apps'])
+
+k8s_yaml('manifests/orchestrator.yaml')
+k8s_resource(workload='multi-agent-workflow-orchestrator', new_name="orchestrator", resource_deps=['dapr'], labels=['apps'], port_forwards=['8004:8004'])
+
+
+cmd_button('multi-agent-workflow-orchestrator:start',
+            argv=['sh', '-c', 'curl --silent -X POST http://localhost:8004/start-workflow -H "Content-Type: application/json" -d \'{"task": "How to get to Mordor? We all need to help!"}\''],
+            resource='orchestrator',
+            icon_name='cloud_download',
+            text='start workflow',
+)
