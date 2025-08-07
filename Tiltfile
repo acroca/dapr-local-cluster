@@ -2,6 +2,8 @@
 load('ext://helm_resource', 'helm_resource', 'helm_repo')
 load('ext://namespace', 'namespace_create', 'namespace_inject')
 namespace_create('dapr-tests')
+k8s_kind('Namespace')
+k8s_resource(workload='dapr-tests', labels=['core'], pod_readiness="ignore")
 
 helm_repo('bitnami', 'https://charts.bitnami.com/bitnami')
 helm_resource('redis', 'bitnami/redis',
@@ -18,7 +20,7 @@ helm_resource('redis', 'bitnami/redis',
              resource_deps=['bitnami', 'dapr-tests'],
              labels=['core'])
 k8s_yaml("manifests/redis_insight.yaml")
-k8s_resource(workload='redisinsight', resource_deps=['redis'], labels=['core'], port_forwards=['5540:5540'])
+k8s_resource(workload='redisinsight', resource_deps=['redis'], labels=['core'], port_forwards=['5540:5540'], links="http://localhost:5540/0/browser")
 
 helm_repo('openzipkin', 'https://zipkin.io/zipkin-helm')
 helm_resource('zipkin', 'openzipkin/zipkin',
@@ -79,4 +81,5 @@ k8s_resource(workload='workflowstatestore', resource_deps=['dapr', 'redis'], lab
 # load_dynamic('apps/workflows-go/Tiltfile')
 # load_dynamic('apps/workflows-stress/Tiltfile')
 # load_dynamic('apps/dapr-agents/Tiltfile')
+load_dynamic('apps/tracing-dotnet/Tiltfile')
 

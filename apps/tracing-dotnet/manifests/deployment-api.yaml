@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracing-dotnet-api
+  namespace: dapr-tests
+  labels:
+    app: tracing-dotnet-api
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: tracing-dotnet-api
+  template:
+    metadata:
+      labels:
+        app: tracing-dotnet-api
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "tracing-dotnet-api"
+        dapr.io/app-port: "7283"
+        dapr.io/app-protocol: "http"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: pub
+        image: localhost:5001/tracing-dotnet-api:latest
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

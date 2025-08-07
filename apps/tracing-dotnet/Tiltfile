@@ -1,0 +1,17 @@
+load('ext://uibutton', 'cmd_button')
+
+docker_build('localhost:5001/tracing-dotnet-api', 'API')
+docker_build('localhost:5001/tracing-dotnet-worker', 'Worker')
+k8s_yaml('manifests/deployment-api.yaml')
+k8s_yaml('manifests/deployment-worker.yaml')
+k8s_resource(workload='tracing-dotnet-api', resource_deps=['dapr', 'pubsub'], labels=['apps'], port_forwards=['7283:7283'])
+k8s_resource(workload='tracing-dotnet-worker', resource_deps=['dapr', 'pubsub'], labels=['apps'])
+
+# curl -v -X POST -F "files=@apps/tracing-dotnet/sample.pdf" http://localhost:7283/files
+
+cmd_button('tracing-dotnet-api:submit-file',
+            argv=['sh', '-c', 'curl --silent -X POST -F "files=@apps/tracing-dotnet/sample.pdf" http://localhost:7283/files'],
+            resource='tracing-dotnet-api',
+            icon_name='cloud_download',
+            text='Submit file',
+)
