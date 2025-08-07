@@ -9,6 +9,7 @@ metadata:
                                    # application's environment
                                    # variables `RI_APP_HOST` and
                                    # `RI_APP_PORT`
+  namespace: dapr-tests
 spec:
   type: LoadBalancer
   ports:
@@ -22,6 +23,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redisinsight #deployment name
+  namespace: dapr-tests
   labels:
     app: redisinsight #deployment label
 spec:
@@ -46,7 +48,7 @@ spec:
           protocol: TCP
         env:
         - name: RI_REDIS_HOST
-          value: redis-master.default.svc.cluster.local
+          value: dapr-redis-master.dapr-tests.svc.cluster.local
         - name: RI_ACCEPT_TERMS_AND_CONDITIONS
           value: "true"
       volumes:

@@ -1,27 +1,30 @@
 # Load Helm extension
 load('ext://helm_resource', 'helm_resource', 'helm_repo')
+load('ext://namespace', 'namespace_create', 'namespace_inject')
+namespace_create('dapr-tests')
 
 helm_repo('bitnami', 'https://charts.bitnami.com/bitnami')
 helm_resource('redis', 'bitnami/redis',
-             namespace='default',
+             namespace='dapr-tests',
              flags=[
                 '--set', 'architecture=standalone',
                 '--set', 'auth.enabled=false',
                 '--set', 'master.resources.requests.memory=512Mi',
                 '--set', 'master.resources.requests.cpu=200m',
                 '--set', 'master.resources.limits.memory=1024Mi',
-                '--set', 'master.resources.limits.cpu=200m'
+                '--set', 'master.resources.limits.cpu=200m',
+                '--set', 'fullnameOverride=dapr-redis',
               ],
-             resource_deps=['bitnami'],
+             resource_deps=['bitnami', 'dapr-tests'],
              labels=['core'])
 k8s_yaml("manifests/redis_insight.yaml")
 k8s_resource(workload='redisinsight', resource_deps=['redis'], labels=['core'], port_forwards=['5540:5540'])
 
 helm_repo('openzipkin', 'https://zipkin.io/zipkin-helm')
 helm_resource('zipkin', 'openzipkin/zipkin',
-             namespace='default',
+             namespace='dapr-tests',
              flags=['--set', 'zipkin.storage.type=mem'],
-             resource_deps=['openzipkin'],
+             resource_deps=['openzipkin', 'dapr-tests'],
              labels=['core'],
              port_forwards=['9411:9411'])
 
@@ -31,19 +34,20 @@ dapr_version = "1.15"
 if dapr_version == "dev":
   local_resource('dapr',
                 dir='../dapr',
-                cmd='mise exec dapr@1.15 -- dapr uninstall -k -n default && make build docker-push docker-deploy-k8s',
+                cmd='mise exec dapr@1.15 -- dapr uninstall -k -n dapr-tests && make build docker-push docker-deploy-k8s',
                 env={
                   'HA_MODE': 'true',
                   'DAPR_REGISTRY': 'localhost:5001/dapr',
                   'DAPR_TAG': 'dev',
                   'DAPR_TEST_NAMESPACE': 'dapr-tests',
-                  'DAPR_NAMESPACE': 'default',
+                  'DAPR_NAMESPACE': 'dapr-tests',
                   'TARGET_OS': 'linux',
                   'TARGET_ARCH': 'arm64',
                   'GOOS': 'linux',
                   'GOARCH': 'arm64',
                   'LOG_LEVEL': 'debug'
                 },
+                resource_deps=['dapr-tests'],
                 labels=['core'])
 else:
   # runtime_version = "latest"
@@ -52,21 +56,22 @@ else:
   runtime_version = "1.16.0-rc.2"
   local_resource('dapr',
                 cmd='''
-                  mise exec dapr@%s -- dapr uninstall -k -n default && \
-                  mise exec dapr@%s -- dapr init -k -n default --runtime-version %s --wait
+                  mise exec dapr@%s -- dapr uninstall -k -n dapr-tests && \
+                  mise exec dapr@%s -- dapr init -k -n dapr-tests --runtime-version %s --wait
                 ''' % (dapr_version, dapr_version, runtime_version),
+                resource_deps=['dapr-tests'],
                 labels=['core'])
 
 k8s_kind('Configuration')
 k8s_kind('Component')
 k8s_yaml("manifests/config.yaml")
-k8s_resource(workload='daprconfig', resource_deps=['dapr'], labels=['core'], pod_readiness="ignore")
+k8s_resource(workload='daprconfig', resource_deps=['dapr'], labels=['components'], pod_readiness="ignore")
 k8s_yaml("manifests/component_pubsub.yaml")
-k8s_resource(workload='pubsub', resource_deps=['dapr', 'redis'], labels=['core'], pod_readiness="ignore")
+k8s_resource(workload='pubsub', resource_deps=['dapr', 'redis'], labels=['components'], pod_readiness="ignore")
 k8s_yaml("manifests/component_state.yaml")
-k8s_resource(workload='statestore', resource_deps=['dapr', 'redis'], labels=['core'], pod_readiness="ignore")
+k8s_resource(workload='statestore', resource_deps=['dapr', 'redis'], labels=['components'], pod_readiness="ignore")
 k8s_yaml("manifests/component_workflowstate.yaml")
-k8s_resource(workload='workflowstatestore', resource_deps=['dapr', 'redis'], labels=['core'], pod_readiness="ignore")
+k8s_resource(workload='workflowstatestore', resource_deps=['dapr', 'redis'], labels=['components'], pod_readiness="ignore")
 
 # load_dynamic('apps/pub/Tiltfile')
 # load_dynamic('apps/sub/Tiltfile')

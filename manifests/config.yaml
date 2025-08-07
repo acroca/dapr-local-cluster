@@ -2,8 +2,9 @@ apiVersion: dapr.io/v1alpha1
 kind: Configuration
 metadata:
   name: daprconfig
+  namespace: dapr-tests
 spec:
   tracing:
     samplingRate: "1"
     zipkin:
-      endpointAddress: "http://zipkin.default.svc.cluster.local:9411/api/v2/spans"
+      endpointAddress: "http://zipkin.dapr-tests.svc.cluster.local:9411/api/v2/spans"
