@@ -30,6 +30,20 @@ helm_resource('zipkin', 'openzipkin/zipkin',
              labels=['core'],
              port_forwards=['9411:9411'])
 
+
+helm_resource('postgres', 'bitnami/postgresql',
+             namespace='dapr-tests',
+             flags=[
+                '--set', 'auth.database=dapr_test',
+                '--set', 'auth.username=dapr',
+                '--set', 'auth.password=dapr',
+                '--set', 'auth.postgresPassword=example',
+                '--set', 'fullnameOverride=dapr-postgres-postgresql',
+              ],
+             resource_deps=['bitnami', 'dapr-tests'],
+             labels=['core'],
+             port_forwards=['5432:5432'])
+
 dapr_version = "1.15"
 # dapr_version = "dev"
 
@@ -55,7 +69,7 @@ else:
   # runtime_version = "latest"
   # runtime_version = "1.13.6"
   # runtime_version = "1.14.4"
-  runtime_version = "1.16.0-rc.2"
+  runtime_version = "1.16.0-rc.3"
   local_resource('dapr',
                 cmd='''
                   mise exec dapr@%s -- dapr uninstall -k -n dapr-tests && \
