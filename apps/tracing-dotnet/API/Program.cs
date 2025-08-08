@@ -39,13 +39,13 @@ builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServe
     options.Limits.MaxRequestBodySize = 1073741824; // 1 GB
 });
 
-// // Uncomment this blob to fix telemetry issues
-// builder.Services.AddOpenTelemetry()
-//     .ConfigureResource(resource => resource.AddService("dsnext-api"))
-//     .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddZipkinExporter(options =>
-//     {
-//         options.Endpoint = new Uri("http://zipkin.dapr-tests.svc.cluster.local:9411/api/v2/spans");
-//     }).SetSampler(new AlwaysOnSampler()));
+// Uncomment this blob to fix telemetry issues
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("dsnext-api"))
+    .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddZipkinExporter(options =>
+    {
+        options.Endpoint = new Uri("http://zipkin.dapr-tests.svc.cluster.local:9411/api/v2/spans");
+    }).SetSampler(new AlwaysOnSampler()));
 
 builder.Services.AddDaprClient();
 

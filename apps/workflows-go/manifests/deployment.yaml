@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: workflows-go
+  namespace: dapr-tests
   labels:
     app: workflows-go
 spec:
@@ -18,6 +19,7 @@ spec:
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: "workflows-go"
+        dapr.io/config: "daprconfig"
     spec:
       terminationGracePeriodSeconds: 0
       containers:

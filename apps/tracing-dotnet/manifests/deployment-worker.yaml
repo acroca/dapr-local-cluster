@@ -21,6 +21,7 @@ spec:
         dapr.io/app-id: "tracing-dotnet-worker"
         dapr.io/app-port: "7221"
         dapr.io/app-protocol: "http"
+        dapr.io/config: "daprconfig"
     spec:
       terminationGracePeriodSeconds: 0
       containers:

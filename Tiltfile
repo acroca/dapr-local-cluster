@@ -78,7 +78,7 @@ k8s_resource(workload='workflowstatestore', resource_deps=['dapr', 'redis'], lab
 # load_dynamic('apps/pub/Tiltfile')
 # load_dynamic('apps/sub/Tiltfile')
 # load_dynamic('apps/workflows-py/Tiltfile')
-# load_dynamic('apps/workflows-go/Tiltfile')
+load_dynamic('apps/workflows-go/Tiltfile')
 # load_dynamic('apps/workflows-stress/Tiltfile')
 # load_dynamic('apps/dapr-agents/Tiltfile')
 load_dynamic('apps/tracing-dotnet/Tiltfile')
