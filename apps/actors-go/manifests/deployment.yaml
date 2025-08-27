@@ -1,31 +1,31 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tracing-dotnet-api
+  name: actors-go
   labels:
-    app: tracing-dotnet-api
+    app: actors-go
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: tracing-dotnet-api
+      app: actors-go
   template:
     metadata:
       labels:
-        app: tracing-dotnet-api
+        app: actors-go
       annotations:
         dapr.io/enabled: "true"
-        dapr.io/app-id: "tracing-dotnet-api"
-        dapr.io/app-port: "7283"
-        dapr.io/app-protocol: "http"
+        dapr.io/app-id: "actors-go"
         dapr.io/config: "daprconfig"
+        dapr.io/app-port: "6010"
+        # dapr.io/log-level: "debug"
     spec:
       terminationGracePeriodSeconds: 0
       containers:
-      - name: pub
-        image: localhost:5001/tracing-dotnet-api:latest
+      - name: actors-go
+        image: localhost:5001/actors-go:latest
         resources:
           limits:
             cpu: "0.5"

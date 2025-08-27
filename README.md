@@ -69,3 +69,7 @@ task tilt-up
 3. **Monitoring**: Monitor services through the Tilt UI at http://localhost:10350
 4. **Iteration**: Tilt automatically rebuilds and redeploys when app code changes. Dapr doesn't rebuild automatically, so you need to trigger it manually from the Tilt UI, and rebuild all the apps after a dapr rebuild.
 5. **Cleanup**: Use `task cluster-down` when done developing
+
+# E2E
+
+To run the e2e tests, you need to rebuild the cluster and run `tilt up` in the e2e directory.

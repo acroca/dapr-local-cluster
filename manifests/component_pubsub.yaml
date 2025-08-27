@@ -2,12 +2,11 @@ apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
   name: pubsub
-  namespace: dapr-tests
 spec:
   type: pubsub.redis
   version: v1
   metadata:
   - name: redisHost
-    value: dapr-redis-master.dapr-tests.svc.cluster.local:6379
+    value: redis-master.default.svc.cluster.local:6379
   - name: redisPassword
     value: ""

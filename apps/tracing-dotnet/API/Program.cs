@@ -44,7 +44,7 @@ builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("dsnext-api"))
     .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddZipkinExporter(options =>
     {
-        options.Endpoint = new Uri("http://zipkin.dapr-tests.svc.cluster.local:9411/api/v2/spans");
+        options.Endpoint = new Uri("http://zipkin.default.svc.cluster.local:9411/api/v2/spans");
     }).SetSampler(new AlwaysOnSampler()));
 
 builder.Services.AddDaprClient();
