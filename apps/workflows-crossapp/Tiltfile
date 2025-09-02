@@ -1,0 +1,16 @@
+load('ext://uibutton', 'cmd_button')
+
+# Workflows service (Go)
+docker_build('localhost:5001/workflows-crossapp1', './app1')
+docker_build('localhost:5001/workflows-crossapp2', './app2')
+k8s_yaml('manifests/deployment1.yaml')
+k8s_yaml('manifests/deployment2.yaml')
+k8s_resource(workload='workflows-crossapp1', resource_deps=['dapr'], labels=['apps'], port_forwards=['6008:6008'])
+k8s_resource(workload='workflows-crossapp2', resource_deps=['dapr'], labels=['apps'], port_forwards=['6009:6009'])
+
+cmd_button('workflows-crossapp1:start',
+            argv=['sh', '-c', 'curl --silent -X POST http://localhost:6008/start'],
+            resource='workflows-crossapp1',
+            icon_name='cloud_download',
+            text='start workflow',
+)

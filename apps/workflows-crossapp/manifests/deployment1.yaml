@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflows-crossapp1
+  labels:
+    app: workflows-crossapp1
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: workflows-crossapp1
+  template:
+    metadata:
+      labels:
+        app: workflows-crossapp1
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "workflows-crossapp1"
+        dapr.io/config: "daprconfig"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: workflows-crossapp1
+        image: localhost:5001/workflows-crossapp1:latest
+        ports:
+        - containerPort: 6008
+        env:
+        - name: APP_PORT
+          value: "6008"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

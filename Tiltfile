@@ -39,10 +39,10 @@ else:
               labels=['core'],
               port_forwards=['9411:9411'])
 
-  dapr_version = "1.15"
-  # dapr_version = "dev"
+  dapr_cli_version = "1.15"
+  # dapr_cli_version = "dev" # use ../dapr instead of a release
 
-  if dapr_version == "dev":
+  if dapr_cli_version == "dev":
     local_resource('dapr-images',
                   dir='../dapr',
                   cmd='mise exec dapr@1.15 -- dapr uninstall -k && make build docker-push',
@@ -87,12 +87,12 @@ else:
     # runtime_version = "latest"
     # runtime_version = "1.13.6"
     # runtime_version = "1.14.4"
-    runtime_version = "1.16.0-rc.3"
+    runtime_version = "1.16.0-rc.5"
     local_resource('dapr',
                   cmd='''
                     mise exec dapr@%s -- dapr uninstall -k -n default && \
                     mise exec dapr@%s -- dapr init -k -n default --runtime-version %s --wait
-                  ''' % (dapr_version, dapr_version, runtime_version),
+                  ''' % (dapr_cli_version, dapr_cli_version, runtime_version),
                   labels=['core'])
 
   k8s_yaml("manifests/config.yaml")
@@ -108,6 +108,7 @@ else:
   # load_dynamic('apps/pub/Tiltfile')
   # load_dynamic('apps/sub/Tiltfile')
   # load_dynamic('apps/workflows-py/Tiltfile')
+  # load_dynamic('apps/workflows-crossapp/Tiltfile')
   # load_dynamic('apps/workflows-go/Tiltfile')
   # load_dynamic('apps/workflows-stress/Tiltfile')
   # load_dynamic('apps/dapr-agents/Tiltfile')
