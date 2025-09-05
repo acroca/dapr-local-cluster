@@ -18,6 +18,7 @@ spec:
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: "workflows-stress"
+        dapr.io/log-level: "debug"
     spec:
       terminationGracePeriodSeconds: 0
       containers:

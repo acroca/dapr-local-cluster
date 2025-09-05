@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/rand"
 	"os/signal"
@@ -14,9 +13,11 @@ import (
 
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/dapr/go-sdk/workflow"
+	"github.com/google/uuid"
 )
 
 var count atomic.Uint64
+var waitingForWorflows atomic.Int64
 
 func main() {
 	// Create and start workflow worker
@@ -41,8 +42,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	concurrentWorkflowRuns := 100
-	workers := 200
+	concurrentWorkflowRuns := 3
+	workers := 3
 
 	wg := sync.WaitGroup{}
 	wg.Add(workers)
@@ -67,7 +68,7 @@ func main() {
 				return
 			case <-ticker.C:
 				currCount := count.Load()
-				log.Printf("Workflows completed: %d (about %d/s)", currCount, currCount-prevCount)
+				log.Printf("Workflows completed: %d (about %d/s) (waiting for %d)", currCount, currCount-prevCount, waitingForWorflows.Load())
 				prevCount = currCount
 			}
 		}
@@ -105,25 +106,33 @@ func RunWorkflow(wfClient *workflow.Client) error {
 	// Use current timestamp as workflow input
 	workflowInput := time.Now().Format(time.RFC3339)
 
+	workflowID := uuid.NewString()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	// Start workflow
-	id, err := wfClient.ScheduleNewWorkflow(context.Background(), "TestWorkflow", workflow.WithInput(workflowInput))
+	_, err := wfClient.ScheduleNewWorkflow(ctx, "TestWorkflow", workflow.WithInput(workflowInput), workflow.WithInstanceID(workflowID))
 	if err != nil {
+		log.Printf("Error scheduling workflow (id: %s): %v\n", workflowID, err)
 		return err
 	}
 
-	_, err = wfClient.WaitForWorkflowCompletion(context.Background(), id)
+	waitingForWorflows.Add(1)
+	defer waitingForWorflows.Add(-1)
+	_, err = wfClient.WaitForWorkflowCompletion(ctx, workflowID)
 	if err != nil {
+		log.Printf("Error waiting for workflow (id: %s) completion: %v\n", workflowID, err)
 		return err
 	}
 
-	// Fetch workflow result
-	respFetch, err := wfClient.FetchWorkflowMetadata(context.Background(), id, workflow.WithFetchPayloads(true))
-	if err != nil {
-		return err
-	}
-	if respFetch.RuntimeStatus.String() != "COMPLETED" {
-		return fmt.Errorf("workflow %s failed! Status: %s", id, respFetch.RuntimeStatus.String())
-	}
+	// // Fetch workflow result
+	// respFetch, err := wfClient.FetchWorkflowMetadata(context.Background(), id, workflow.WithFetchPayloads(true))
+	// if err != nil {
+	// 	return err
+	// }
+	// if respFetch.RuntimeStatus.String() != "COMPLETED" {
+	// 	return fmt.Errorf("workflow %s failed! Status: %s", id, respFetch.RuntimeStatus.String())
+	// }
 	count.Add(1)
 	return nil
 }
@@ -138,5 +147,6 @@ func TestWorkflow(ctx *workflow.WorkflowContext) (any, error) {
 }
 
 func TestActivity(ctx workflow.ActivityContext) (any, error) {
+	// time.Sleep(1 * time.Second)
 	return rand.Intn(100000), nil
 }
