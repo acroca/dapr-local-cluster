@@ -11,14 +11,25 @@ k8s_kind('Service')
 k8s_kind('Configuration')
 k8s_kind('Component')
 
-run_e2e = False
-# run_e2e = True
 helm_repo('bitnami', 'https://charts.bitnami.com/bitnami')
 helm_repo('openzipkin', 'https://zipkin.io/zipkin-helm')
+helm_repo('dapr-helm-repo', 'https://dapr.github.io/helm-charts')
+
+run_e2e = False # False/True
+
+pubsub_backend = 'redis' # redis
+state_backend = 'redis' # redis/postgres
+
 
 if run_e2e:
   load_dynamic('e2e/Tiltfile')
 else:
+  helm_resource('zipkin', 'openzipkin/zipkin',
+              flags=['--set', 'zipkin.storage.type=mem'],
+              resource_deps=['openzipkin'],
+              labels=['core'],
+              port_forwards=['9411:9411'])
+
   helm_resource('redis', 'bitnami/redis',
               flags=[
                   '--set', 'architecture=standalone',
@@ -27,17 +38,25 @@ else:
                   '--set', 'master.resources.requests.cpu=200m',
                   '--set', 'master.resources.limits.memory=1024Mi',
                   '--set', 'master.resources.limits.cpu=200m',
+                  '--set', 'master.persistence.enabled=false',
                 ],
               resource_deps=['bitnami'],
               labels=['core'])
   k8s_yaml("manifests/redis_insight.yaml")
   k8s_resource(workload='redisinsight', resource_deps=['redis'], labels=['core'], port_forwards=['5540:5540'], links="http://localhost:5540/0/browser")
 
-  helm_resource('zipkin', 'openzipkin/zipkin',
-              flags=['--set', 'zipkin.storage.type=mem'],
-              resource_deps=['openzipkin'],
-              labels=['core'],
-              port_forwards=['9411:9411'])
+  helm_resource('postgres', 'bitnami/postgresql',
+            release_name='postgres',
+            flags=[
+                '--set', 'auth.database=dapr_test',
+                '--set', 'auth.username=dapr',
+                '--set', 'auth.password=dapr',
+                '--set', 'auth.postgresPassword=example',
+                '--set', 'fullnameOverride=dapr-postgres-postgresql',
+                '--set', 'primary.persistence.enabled=false',
+              ],
+            resource_deps=['bitnami'],
+            labels=['core'])
 
   dapr_cli_version = "1.15"
   # dapr_cli_version = "dev" # use ../dapr instead of a release
@@ -84,25 +103,24 @@ else:
                 resource_deps=['dapr-images'],
                 labels=['core'])
   else:
-    # runtime_version = "latest"
-    # runtime_version = "1.13.6"
-    # runtime_version = "1.14.4"
-    runtime_version = "1.16.0-rc.5"
-    local_resource('dapr',
-                  cmd='''
-                    mise exec dapr@%s -- dapr uninstall -k -n default && \
-                    mise exec dapr@%s -- dapr init -k -n default --runtime-version %s --wait
-                  ''' % (dapr_cli_version, dapr_cli_version, runtime_version),
-                  labels=['core'])
+    helm_resource('dapr', 'dapr/dapr',
+      release_name='dapr',
+      flags=[
+        '--set', 'global.ha.enabled=true',
+        '--set', 'global.mtls.enabled=true',
+        '--version', "1.16.0-rc.7",
+      ],
+      resource_deps=['dapr-helm-repo'],
+      labels=['core'])
 
-  k8s_yaml("manifests/config.yaml")
+  k8s_yaml("manifests/component_config.yaml")
   k8s_resource(workload='daprconfig', resource_deps=['dapr'], labels=['components'], pod_readiness="ignore")
-  k8s_yaml("manifests/component_pubsub.yaml")
-  k8s_resource(workload='pubsub', resource_deps=['dapr', 'redis'], labels=['components'], pod_readiness="ignore")
-  k8s_yaml("manifests/component_state.yaml")
-  k8s_resource(workload='statestore', resource_deps=['dapr', 'redis'], labels=['components'], pod_readiness="ignore")
-  k8s_yaml("manifests/component_workflowstate.yaml")
-  k8s_resource(workload='workflowstatestore', resource_deps=['dapr', 'redis'], labels=['components'], pod_readiness="ignore")
+  k8s_yaml("manifests/component_pubsub.%s.yaml" % pubsub_backend)
+  k8s_resource(workload='pubsub', resource_deps=['dapr', pubsub_backend], labels=['components'], pod_readiness="ignore")
+  k8s_yaml("manifests/component_state.%s.yaml" % state_backend)
+  k8s_resource(workload='statestore', resource_deps=['dapr', state_backend], labels=['components'], pod_readiness="ignore")
+  k8s_yaml("manifests/component_workflowstate.%s.yaml" % state_backend)
+  k8s_resource(workload='workflowstatestore', resource_deps=['dapr', state_backend], labels=['components'], pod_readiness="ignore")
 
   # load_dynamic('apps/actors-go/Tiltfile')
   # load_dynamic('apps/pub/Tiltfile')
