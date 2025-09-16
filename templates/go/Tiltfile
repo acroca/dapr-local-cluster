@@ -1,0 +1,13 @@
+load('ext://uibutton', 'cmd_button')
+
+# Workflows service (Go)
+docker_build('localhost:5001/$APP_ID$', '.')
+k8s_yaml('manifests/deployment.yaml')
+k8s_resource(workload='$APP_ID$', resource_deps=['dapr'], labels=['apps'], port_forwards=['$APP_PORT$:$APP_PORT$'])
+
+cmd_button('$APP_ID$:start',
+  argv=['sh', '-c', 'curl --silent -X POST http://localhost:$APP_PORT$/start'],
+  resource='$APP_ID$',
+  icon_name='cloud_download',
+  text='start',
+)

@@ -4,3 +4,11 @@ tilt = "0.35.0"
 go = "1.24.4"
 kind = "0.29.0"
 java = "openjdk-21"
+
+[tasks.gen_go]
+run = [
+  'echo APP_ID={{arg(name="app_id")}} APP_PORT={{arg(name="app_port")}}',
+  'rsync -av templates/go/ apps/{{arg(name="app_id")}}/',
+  'find apps/{{arg(name="app_id")}} -type f -exec sed -i "" -e "s/\\\$APP_ID\\\$/{{arg(name="app_id")}}/g" {} +',
+  'find apps/{{arg(name="app_id")}} -type f -exec sed -i "" -e "s/\\\$APP_PORT\\\$/{{arg(name="app_port")}}/g" {} +',
+]

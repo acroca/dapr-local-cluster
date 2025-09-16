@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $APP_ID$
+  labels:
+    app: $APP_ID$
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: $APP_ID$
+  template:
+    metadata:
+      labels:
+        app: $APP_ID$
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "$APP_ID$"
+        dapr.io/config: "daprconfig"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: $APP_ID$
+        image: localhost:5001/$APP_ID$:latest
+        ports:
+        - containerPort: $APP_PORT$
+        env:
+        - name: APP_PORT
+          value: "$APP_PORT$"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"
