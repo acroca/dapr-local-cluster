@@ -13,7 +13,6 @@ k8s_kind('Component')
 k8s_kind('Deployment')
 k8s_kind('ConfigMap')
 
-helm_repo('cnpg', 'https://cloudnative-pg.github.io/charts')
 helm_repo('dandydev', 'https://dandydeveloper.github.io/charts')
 helm_repo('openzipkin', 'https://zipkin.io/zipkin-helm')
 helm_repo('dapr-helm-repo', 'https://dapr.github.io/helm-charts')
@@ -22,7 +21,6 @@ run_e2e = False # False/True
 
 pubsub_backend = 'redis' # redis
 state_backend = 'redis' # redis/postgres
-
 
 if run_e2e:
   load_dynamic('e2e/Tiltfile')
@@ -43,25 +41,15 @@ else:
     #             labels=['core'])
   k8s_yaml("manifests/redis.yaml")
   k8s_resource(workload='redis', labels=['core'])
-  # k8s_resource(workload='redis-config', labels=['core'])
   k8s_resource(workload='redis-master', labels=['core'])
 
   k8s_yaml("manifests/redis_insight.yaml")
   k8s_resource(workload='redisinsight', resource_deps=['redis'], labels=['core'], port_forwards=['5540:5540'], links="http://localhost:5540/0/browser")
 
-  if state_backend == 'postgres':
-    helm_resource('cloudnative-pg', 'cnpg/cloudnative-pg',
-              release_name='postgres',
-              flags=[
-                  '--set', 'config.clusterWide=false',
-                ],
-              resource_deps=['cnpg'],
-              labels=['core'])
-
-    k8s_kind('Cluster')
-    k8s_yaml("manifests/postgres.yaml")
-    k8s_resource(workload='postgres', resource_deps=['cloudnative-pg'], labels=['core'])
-    k8s_resource(workload='dapr-postgres-password', resource_deps=['cloudnative-pg'], labels=['core'])
+  k8s_yaml("manifests/postgres.yaml")
+  k8s_resource(workload='postgres', labels=['core'])
+  k8s_resource(workload='postgres-config', labels=['core'])
+  k8s_resource(workload='dapr-postgres-postgresql', labels=['core'])
 
   dapr_cli_version = "1.15"
   # dapr_cli_version = "dev" # use ../dapr instead of a release

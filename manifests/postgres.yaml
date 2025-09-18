@@ -1,42 +1,63 @@
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  labels:
+    app: postgres
+data:
+  POSTGRES_DB: dapr_test
+  POSTGRES_PASSWORD: admin
+  init-user-db.sh: |
+    #!/usr/bin/env bash
+    set -e
+
+    psql -v ON_ERROR_STOP=1 --username "postgres" --dbname "dapr_test" <<-EOSQL
+      CREATE USER dapr WITH PASSWORD 'dapr';
+      ALTER USER dapr WITH SUPERUSER;
+    EOSQL
+
+---
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: postgres
 spec:
-  instances: 1
-
-  storage:
-    size: 100Mi
-  # superuserSecret: example
-  # enableSuperuserAccess: true
-
-  managed:
-    roles:
-    - name: dapr
-      ensure: present
-      comment: Dapr
-      login: true
-      superuser: true
-      passwordSecret:
-        name: dapr-postgres-password
-
-    services:
-      additional:
-        - selectorType: rw
-          serviceTemplate:
-            metadata:
-              name: dapr-postgres-postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: 'postgres:17'
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: postgres-config
+          volumeMounts:
+            - mountPath: /docker-entrypoint-initdb.d
+              name: init-script
+      volumes:
+        - name: init-script
+          configMap:
+            name: postgres-config
+            items:
+              - key: init-user-db.sh
+                path: init-user-db.sh
 ---
-
 apiVersion: v1
-data:
-  password: ZGFwcg==
-  username: ZGFwcg==
-kind: Secret
+kind: Service
 metadata:
-  name: dapr-postgres-password
-  labels:
-    cnpg.io/reload: "true"
-type: kubernetes.io/basic-auth
-
----
+  name: dapr-postgres-postgresql
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres
