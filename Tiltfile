@@ -10,8 +10,11 @@ k8s_kind('HTTPEndpoint')
 k8s_kind('Service')
 k8s_kind('Configuration')
 k8s_kind('Component')
+k8s_kind('Deployment')
+k8s_kind('ConfigMap')
 
-helm_repo('bitnami', 'https://charts.bitnami.com/bitnami')
+helm_repo('cnpg', 'https://cloudnative-pg.github.io/charts')
+helm_repo('dandydev', 'https://dandydeveloper.github.io/charts')
 helm_repo('openzipkin', 'https://zipkin.io/zipkin-helm')
 helm_repo('dapr-helm-repo', 'https://dapr.github.io/helm-charts')
 
@@ -30,33 +33,35 @@ else:
               labels=['core'],
               port_forwards=['9411:9411'])
 
-  helm_resource('redis', 'bitnami/redis',
-              flags=[
-                  '--set', 'architecture=standalone',
-                  '--set', 'auth.enabled=false',
-                  '--set', 'master.resources.requests.memory=512Mi',
-                  '--set', 'master.resources.requests.cpu=200m',
-                  '--set', 'master.resources.limits.memory=1024Mi',
-                  '--set', 'master.resources.limits.cpu=200m',
-                  '--set', 'master.persistence.enabled=false',
-                ],
-              resource_deps=['bitnami'],
-              labels=['core'])
+    # helm_resource('redis', 'dandydev/redis-ha',
+    #             flags=[
+    #                 # '--set', 'replicas=1',
+    #                 '--set', 'persistentVolume.enabled=false',
+    #                 '--set', 'fullnameOverride=redis-master',
+    #               ],
+    #             resource_deps=['dandydev'],
+    #             labels=['core'])
+  k8s_yaml("manifests/redis.yaml")
+  k8s_resource(workload='redis', labels=['core'])
+  # k8s_resource(workload='redis-config', labels=['core'])
+  k8s_resource(workload='redis-master', labels=['core'])
+
   k8s_yaml("manifests/redis_insight.yaml")
   k8s_resource(workload='redisinsight', resource_deps=['redis'], labels=['core'], port_forwards=['5540:5540'], links="http://localhost:5540/0/browser")
 
-  helm_resource('postgres', 'bitnami/postgresql',
-            release_name='postgres',
-            flags=[
-                '--set', 'auth.database=dapr_test',
-                '--set', 'auth.username=dapr',
-                '--set', 'auth.password=dapr',
-                '--set', 'auth.postgresPassword=example',
-                '--set', 'fullnameOverride=dapr-postgres-postgresql',
-                '--set', 'primary.persistence.enabled=false',
-              ],
-            resource_deps=['bitnami'],
-            labels=['core'])
+  if state_backend == 'postgres':
+    helm_resource('cloudnative-pg', 'cnpg/cloudnative-pg',
+              release_name='postgres',
+              flags=[
+                  '--set', 'config.clusterWide=false',
+                ],
+              resource_deps=['cnpg'],
+              labels=['core'])
+
+    k8s_kind('Cluster')
+    k8s_yaml("manifests/postgres.yaml")
+    k8s_resource(workload='postgres', resource_deps=['cloudnative-pg'], labels=['core'])
+    k8s_resource(workload='dapr-postgres-password', resource_deps=['cloudnative-pg'], labels=['core'])
 
   dapr_cli_version = "1.15"
   # dapr_cli_version = "dev" # use ../dapr instead of a release
@@ -108,7 +113,7 @@ else:
       flags=[
         '--set', 'global.ha.enabled=true',
         '--set', 'global.mtls.enabled=true',
-        '--version', "1.16.0-rc.7",
+        '--version', "1.16.0",
       ],
       resource_deps=['dapr-helm-repo'],
       labels=['core'])
@@ -126,7 +131,7 @@ else:
   # load_dynamic('apps/pub/Tiltfile')
   # load_dynamic('apps/sub/Tiltfile')
   # load_dynamic('apps/workflows-py/Tiltfile')
-  # load_dynamic('apps/workflows-crossapp/Tiltfile')
+  load_dynamic('apps/workflows-crossapp/Tiltfile')
   # load_dynamic('apps/workflows-go/Tiltfile')
   # load_dynamic('apps/workflows-stress/Tiltfile')
   # load_dynamic('apps/dapr-agents/Tiltfile')

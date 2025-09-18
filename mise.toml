@@ -1,5 +1,4 @@
 [tools]
-task = "3.44.0"
 tilt = "0.35.0"
 go = "1.24.4"
 kind = "0.29.0"
@@ -11,4 +10,25 @@ run = [
   'rsync -av templates/go/ apps/{{arg(name="app_id")}}/',
   'find apps/{{arg(name="app_id")}} -type f -exec sed -i "" -e "s/\\\$APP_ID\\\$/{{arg(name="app_id")}}/g" {} +',
   'find apps/{{arg(name="app_id")}} -type f -exec sed -i "" -e "s/\\\$APP_PORT\\\$/{{arg(name="app_port")}}/g" {} +',
+]
+
+[tasks.cluster-up]
+wait_for = ['cluster-down']
+run = [
+  'docker run -d --restart=always -p "127.0.0.1:5001:5000" --network bridge --name "kind-registry" registry:2.7 || true',
+  './tilt/cluster-up.sh',
+]
+
+[tasks.cluster-down]
+run = [
+  'kind delete cluster',
+  'docker rm -f kind-registry || true',
+]
+
+[tasks.cluster-rebuild]
+depends = ['cluster-down', 'cluster-up']
+
+[tasks.tilt-up]
+run = [
+  'tilt up',
 ]

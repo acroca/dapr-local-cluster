@@ -94,6 +94,7 @@ func main() {
 }
 
 func TestWorkflow2(ctx *workflow.WorkflowContext) (any, error) {
+	fmt.Println("TestWorkflow2 called")
 	var number int
 	err := ctx.CallActivity(TestActivity2).Await(&number)
 	if err != nil {

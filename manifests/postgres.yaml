@@ -1,0 +1,42 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+spec:
+  instances: 1
+
+  storage:
+    size: 100Mi
+  # superuserSecret: example
+  # enableSuperuserAccess: true
+
+  managed:
+    roles:
+    - name: dapr
+      ensure: present
+      comment: Dapr
+      login: true
+      superuser: true
+      passwordSecret:
+        name: dapr-postgres-password
+
+    services:
+      additional:
+        - selectorType: rw
+          serviceTemplate:
+            metadata:
+              name: dapr-postgres-postgresql
+---
+
+apiVersion: v1
+data:
+  password: ZGFwcg==
+  username: ZGFwcg==
+kind: Secret
+metadata:
+  name: dapr-postgres-password
+  labels:
+    cnpg.io/reload: "true"
+type: kubernetes.io/basic-auth
+
+---

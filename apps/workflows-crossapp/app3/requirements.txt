@@ -1,0 +1,4 @@
+dapr-ext-grpc>=1.12.0
+dapr-ext-workflow>=1.15.0
+dapr>=1.15.0
+flask>=2.3.0
