@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -36,23 +37,6 @@ spec:
       volumes:
         - name: data
           emptyDir: {}
-        # - name: config
-        #   configMap:
-        #     name: redis-config
-        #     items:
-        #     - key: redis-config
-        #       path: redis.conf
-# ---
-
-# apiVersion: v1
-# kind: ConfigMap
-# metadata:
-#   name: redis-config
-# data:
-#   redis-config: |
-#     maxmemory 2mb
-#     maxmemory-policy allkeys-lru
-
 ---
 apiVersion: v1
 kind: Service

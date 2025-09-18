@@ -1,17 +1,6 @@
 load('ext://helm_resource', 'helm_resource', 'helm_repo')
 
-k8s_kind('Namespace')
-k8s_kind('Secret')
-k8s_kind('Role')
-k8s_kind('RoleBinding')
-k8s_kind('Resiliency')
-k8s_kind('Subscription')
-k8s_kind('HTTPEndpoint')
-k8s_kind('Service')
-k8s_kind('Configuration')
-k8s_kind('Component')
-k8s_kind('Deployment')
-k8s_kind('ConfigMap')
+k8s_kind('Service', pod_readiness="ignore")
 
 helm_repo('dandydev', 'https://dandydeveloper.github.io/charts')
 helm_repo('openzipkin', 'https://zipkin.io/zipkin-helm')
@@ -47,9 +36,7 @@ else:
   k8s_resource(workload='redisinsight', resource_deps=['redis'], labels=['core'], port_forwards=['5540:5540'], links="http://localhost:5540/0/browser")
 
   k8s_yaml("manifests/postgres.yaml")
-  k8s_resource(workload='postgres', labels=['core'])
-  k8s_resource(workload='postgres-config', labels=['core'])
-  k8s_resource(workload='dapr-postgres-postgresql', labels=['core'])
+  k8s_resource(workload='postgres', objects=['postgres-config:ConfigMap:default'], labels=['core'])
 
   dapr_cli_version = "1.15"
   # dapr_cli_version = "dev" # use ../dapr instead of a release
@@ -107,13 +94,17 @@ else:
       labels=['core'])
 
   k8s_yaml("manifests/component_config.yaml")
-  k8s_resource(workload='daprconfig', resource_deps=['dapr'], labels=['components'], pod_readiness="ignore")
   k8s_yaml("manifests/component_pubsub.%s.yaml" % pubsub_backend)
-  k8s_resource(workload='pubsub', resource_deps=['dapr', pubsub_backend], labels=['components'], pod_readiness="ignore")
   k8s_yaml("manifests/component_state.%s.yaml" % state_backend)
-  k8s_resource(workload='statestore', resource_deps=['dapr', state_backend], labels=['components'], pod_readiness="ignore")
   k8s_yaml("manifests/component_workflowstate.%s.yaml" % state_backend)
-  k8s_resource(workload='workflowstatestore', resource_deps=['dapr', state_backend], labels=['components'], pod_readiness="ignore")
+  k8s_resource(
+    objects=['daprconfig', 'pubsub', 'statestore', 'workflowstatestore'],
+    new_name='components',
+    resource_deps=['dapr', state_backend, pubsub_backend],
+    labels=['core'],
+    pod_readiness="ignore"
+  )
+
 
   # load_dynamic('apps/actors-go/Tiltfile')
   # load_dynamic('apps/pub/Tiltfile')
