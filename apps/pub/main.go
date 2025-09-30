@@ -13,7 +13,7 @@ func main() {
 	// Create a new client for Dapr using the SDK
 	client, err := dapr.NewClient()
 	if err != nil {
-		panic(err)
+		panic(err.Error())
 	}
 	defer client.Close()
 

@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-bootstrap
+  labels:
+    app: kafka
+spec:
+  type: ClusterIP
+  ports:
+    - name: tcp-kafka
+      port: 9092
+      targetPort: 9092
+  selector:
+    app: kafka
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-headless
+  labels:
+    app: kafka
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - name: tcp-kafka
+      port: 9092
+      targetPort: 9092
+    - name: tcp-controller
+      port: 9093
+      targetPort: 9093
+  selector:
+    app: kafka
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+spec:
+  serviceName: kafka-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      terminationGracePeriodSeconds: 30
+      initContainers:
+        - name: format-storage
+          image: confluentinc/cp-kafka:7.7.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/bash
+            - -lc
+            - |
+              set -eu
+              DATA_DIR="/var/lib/kafka/data"
+              META_FILE="$DATA_DIR/meta.properties"
+              CONF_FILE="/tmp/kraft.properties"
+              if [ -f "$META_FILE" ]; then
+                echo "KRaft storage already formatted."
+              else
+                echo "Preparing KRaft config at $CONF_FILE ..."
+                mkdir -p "$DATA_DIR"
+                if [ -z "${CLUSTER_ID:-}" ]; then
+                  echo "CLUSTER_ID not set, generating deterministic one for dev..."
+                  CLUSTER_ID=$(/usr/bin/kafka-storage random-uuid)
+                fi
+                cat >"$CONF_FILE" <<'EOF'
+              process.roles=broker,controller
+              node.id=1
+              controller.quorum.voters=1@kafka-0.kafka-headless.default.svc.cluster.local:9093
+              listeners=PLAINTEXT://:9092,CONTROLLER://:9093
+              controller.listener.names=CONTROLLER
+              log.dirs=/var/lib/kafka/data
+              inter.broker.listener.name=PLAINTEXT
+              EOF
+                echo "Formatting KRaft storage..."
+                /usr/bin/kafka-storage format \
+                  -t "$CLUSTER_ID" \
+                  -c "$CONF_FILE" \
+                  --ignore-formatted
+              fi
+          env:
+            - name: CLUSTER_ID
+              value: "AAAAAAAAAAAAAAAAAAAAAA"
+      containers:
+        - name: kafka
+          image: confluentinc/cp-kafka:7.7.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: tcp-kafka
+              containerPort: 9092
+            - name: tcp-controller
+              containerPort: 9093
+          env:
+            - name: CLUSTER_ID
+              value: "AAAAAAAAAAAAAAAAAAAAAA"
+            # Core KRaft settings
+            - name: KAFKA_PROCESS_ROLES
+              value: "broker,controller"
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: "CONTROLLER"
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://:9092,CONTROLLER://:9093"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "PLAINTEXT:SASL_PLAINTEXT,CONTROLLER:PLAINTEXT"
+            - name: KAFKA_SASL_ENABLED_MECHANISMS
+              value: "PLAIN"
+            - name: KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL
+              value: "PLAIN"
+            - name: KAFKA_LISTENER_NAME_PLAINTEXT_SASL_ENABLED_MECHANISMS
+              value: "PLAIN"
+            - name: KAFKA_LISTENER_NAME_PLAINTEXT_PLAIN_SASL_JAAS_CONFIG
+              value: "org.apache.kafka.common.security.plain.PlainLoginModule required user_dapr=\"dapr\";"
+            - name: KAFKA_SASL_JAAS_CONFIG
+              value: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"dapr\" password=\"dapr\";"
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: "PLAINTEXT"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://kafka-0.kafka-headless.default.svc.cluster.local:9092"
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: "1@kafka-0.kafka-headless.default.svc.cluster.local:9093"
+
+            # Storage & convenience
+            - name: KAFKA_LOG_DIRS
+              value: "/var/lib/kafka/data"
+            - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+              value: "true"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+
+            # Tuning for quick local/dev use
+            - name: KAFKA_NUM_PARTITIONS
+              value: "1"
+
+          readinessProbe:
+            exec:
+              command: ["/bin/bash","-lc","cat > /tmp/k-client.properties <<'EOC'\nsecurity.protocol=SASL_PLAINTEXT\nsasl.mechanism=PLAIN\nsasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username=\"dapr\" password=\"dapr\";\nEOC\n/usr/bin/kafka-broker-api-versions --bootstrap-server localhost:9092 --command-config /tmp/k-client.properties >/dev/null 2>&1"]
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["/bin/bash","-lc","/usr/bin/kafka-broker-api-versions --bootstrap-server localhost:9092 --command-config /tmp/k-client.properties >/dev/null 2>&1 || exit 1"]
+            initialDelaySeconds: 30
+            periodSeconds: 20

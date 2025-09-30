@@ -17,13 +17,14 @@ spec:
     spec:
       containers:
       - name: redis
-        image: redis:8.0.2
-        # command:
-        #   - redis-server
-          # - "/redis-master/redis.conf"
+        image: docker.io/redislabs/rejson:2.0.11
         env:
-        - name: MASTER
+        - name: REDIS_REPLICATION_MODE
           value: "true"
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "true"
+        - name: REDIS_TLS_ENABLED
+          value: "no"
         ports:
         - containerPort: 6379
         resources:
@@ -32,8 +33,6 @@ spec:
         volumeMounts:
         - mountPath: /redis-master-data
           name: data
-        # - mountPath: /redis-master
-        #   name: config
       volumes:
         - name: data
           emptyDir: {}
