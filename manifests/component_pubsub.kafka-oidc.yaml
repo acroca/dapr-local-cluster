@@ -1,0 +1,24 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+  - name: brokers
+    value: "kafka-kafka-bootstrap.default.svc.cluster.local:9092"
+  - name: authType
+    value: "oidc"
+  - name: oidcTokenEndpoint
+    value: "http://keycloak.default.svc.cluster.local:8080/realms/local/protocol/openid-connect/token"
+  - name: oidcClientID
+    value: "dapr-kafka"
+  - name: oidcClientSecret
+    secretKeyRef:
+      name: dapr-oidc
+      key: client-secret
+  - name: oidcScopes
+    value: "openid"
+  - name: disableTls
+    value: "true"

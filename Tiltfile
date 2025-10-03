@@ -1,8 +1,8 @@
 load('ext://helm_resource', 'helm_resource', 'helm_repo')
 
 k8s_kind('Service', pod_readiness="ignore")
+k8s_kind('Job', pod_readiness="ignore")
 
-helm_repo('dandydev', 'https://dandydeveloper.github.io/charts')
 helm_repo('openzipkin', 'https://zipkin.io/zipkin-helm')
 helm_repo('dapr-helm-repo', 'https://dapr.github.io/helm-charts')
 
@@ -10,6 +10,7 @@ run_e2e = False # False/True
 
 pubsub_backend = 'kafka' # redis/kafka
 state_backend = 'redis' # redis/postgres
+use_oidc = True # True/False (only for kafka)
 
 if run_e2e:
   load_dynamic('e2e/Tiltfile')
@@ -19,15 +20,6 @@ else:
               resource_deps=['openzipkin'],
               labels=['core'],
               port_forwards=['9411:9411'])
-
-    # helm_resource('redis', 'dandydev/redis-ha',
-    #             flags=[
-    #                 # '--set', 'replicas=1',
-    #                 '--set', 'persistentVolume.enabled=false',
-    #                 '--set', 'fullnameOverride=redis-master',
-    #               ],
-    #             resource_deps=['dandydev'],
-    #             labels=['core'])
 
   if state_backend == 'redis' or pubsub_backend == 'redis':
     k8s_yaml("manifests/redis.yaml")
@@ -42,8 +34,23 @@ else:
     k8s_resource(workload='postgres', objects=['postgres-config:ConfigMap:default'], labels=['core'])
 
   if pubsub_backend == 'kafka':
-    k8s_yaml("manifests/kafka.yaml")
-    k8s_resource(workload='kafka', labels=['core'])
+    if use_oidc:
+      # Deploy Strimzi Kafka Operator (for OAuth/OIDC support) and Keycloak IdP
+      helm_repo('strimzi', 'https://strimzi.io/charts/')
+      helm_resource('strimzi-kafka-operator', 'strimzi/strimzi-kafka-operator',
+                    flags=['--set', 'watchAnyNamespace=true'],
+                    resource_deps=['strimzi'],
+                    labels=['core'])
+
+      k8s_yaml("manifests/kafka-oidc.yaml")
+      k8s_resource(objects=['keycloak-realm-local:ConfigMap:default'], new_name='keycloak-cm', labels=['core'])
+      k8s_resource(workload='keycloak:deployment', resource_deps=['keycloak-cm'], labels=['core'])
+      k8s_resource(workload='keycloak-bootstrap', resource_deps=['keycloak:deployment'], labels=['core'])
+      k8s_resource(workload='keycloak:service', resource_deps=['keycloak:deployment'], labels=['core'])
+      k8s_resource(objects=['kafka:kafka', 'kafka-pool:KafkaNodePool:default'], new_name='kafka', resource_deps=['strimzi-kafka-operator', 'keycloak:deployment'], labels=['core'])
+    else:
+      k8s_yaml("manifests/kafka.yaml")
+      k8s_resource(workload='kafka', labels=['core'])
 
   dapr_cli_version = "1.15"
   # dapr_cli_version = "dev" # use ../dapr instead of a release
@@ -100,8 +107,11 @@ else:
       resource_deps=['dapr-helm-repo'],
       labels=['core'])
 
+  pubsub_component = pubsub_backend
+  if use_oidc:
+    pubsub_component = "kafka-oidc"
   k8s_yaml("manifests/component_config.yaml")
-  k8s_yaml("manifests/component_pubsub.%s.yaml" % pubsub_backend)
+  k8s_yaml("manifests/component_pubsub.%s.yaml" % pubsub_component)
   k8s_yaml("manifests/component_state.%s.yaml" % state_backend)
   k8s_yaml("manifests/component_workflowstate.%s.yaml" % state_backend)
   k8s_resource(
