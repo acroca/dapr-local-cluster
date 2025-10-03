@@ -1,4 +1,4 @@
-dapr-ext-grpc>=1.12.0
-dapr-ext-workflow>=1.15.0
-dapr>=1.15.0
+dapr-ext-grpc @ git+https://github.com/acroca/dapr-python-sdk.git@cross-app#subdirectory=ext/dapr-ext-grpc
+dapr-ext-workflow @ git+https://github.com/acroca/dapr-python-sdk.git@cross-app#subdirectory=ext/dapr-ext-workflow
+dapr @ git+https://github.com/acroca/dapr-python-sdk.git@cross-app
 flask>=2.3.0

@@ -114,10 +114,10 @@ else:
 
 
   # load_dynamic('apps/actors-go/Tiltfile')
-  # load_dynamic('apps/pub/Tiltfile')
-  # load_dynamic('apps/sub/Tiltfile')
+  load_dynamic('apps/pub/Tiltfile')
+  load_dynamic('apps/sub/Tiltfile')
   # load_dynamic('apps/workflows-py/Tiltfile')
-  load_dynamic('apps/workflows-crossapp/Tiltfile')
+  # load_dynamic('apps/workflows-crossapp/Tiltfile')
   # load_dynamic('apps/workflows-go/Tiltfile')
   # load_dynamic('apps/workflows-stress/Tiltfile')
   # load_dynamic('apps/dapr-agents/Tiltfile')

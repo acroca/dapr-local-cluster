@@ -17,6 +17,14 @@ cmd_button('workflows-crossapp1:start',
             icon_name='cloud_download',
             text='start workflow',
 )
+
+cmd_button('workflows-crossapp2:start',
+            argv=['sh', '-c', 'curl --silent -X POST http://localhost:6009/start'],
+            resource='workflows-crossapp2',
+            icon_name='cloud_download',
+            text='start workflow',
+)
+
 cmd_button('workflows-crossapp3:start',
             argv=['sh', '-c', 'curl --silent -X POST http://localhost:6010/start'],
             resource='workflows-crossapp3',

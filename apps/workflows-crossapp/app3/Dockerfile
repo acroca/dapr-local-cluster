@@ -8,11 +8,6 @@ RUN apt-get update && apt-get install -y git
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install "git+https://github.com/acroca/dapr-python-sdk.git@cross-app"
-RUN pip install "git+https://github.com/acroca/dapr-python-sdk.git@cross-app#subdirectory=ext/dapr-ext-workflow"
-RUN pip install "git+https://github.com/acroca/dapr-python-sdk.git@cross-app#subdirectory=ext/dapr-ext-grpc"
-RUN pip install "git+https://github.com/acroca/dapr-durabletask-python.git@cross-app"
-
 # Copy application code
 COPY main.py .
 

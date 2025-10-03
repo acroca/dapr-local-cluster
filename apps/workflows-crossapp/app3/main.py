@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 from time import sleep
 import logging
@@ -8,7 +8,7 @@ import sys
 import threading
 
 from flask import Flask, request, jsonify
-from dapr.ext.workflow import DaprWorkflowClient, WorkflowRuntime, DaprWorkflowContext, WorkflowActivityContext
+from dapr.ext.workflow import DaprWorkflowClient, WorkflowRuntime, DaprWorkflowContext, WorkflowActivityContext, RetryPolicy
 
 workflow_name = "test_workflow"
 workflow_runtime = WorkflowRuntime()
@@ -81,7 +81,8 @@ def test_workflow(ctx: DaprWorkflowContext, wf_input: str):
     number2 = yield ctx.call_activity("TestActivity2", app_id="workflows-crossapp2")
     logger.debug(f'Activity completed. Number: {number2}')
 
-    return "Workflow completed with numbers: " + str(number1) + " and " + str(number2)
+    return "Workflow completed"
+
 
 @workflow_runtime.activity(name="random_number_generator")
 def random_number_generator(ctx: WorkflowActivityContext):

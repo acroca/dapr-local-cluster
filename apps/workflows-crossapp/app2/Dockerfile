@@ -1,4 +1,4 @@
-FROM golang:1.24.4-alpine AS builder
+FROM golang:1.24.6-alpine AS builder
 
 WORKDIR /app
 
@@ -9,9 +9,9 @@ FROM alpine:3.19.0
 COPY --from=builder /app/main /app/main
 
 # Set the default port
-ENV APP_PORT=6006
+ENV APP_PORT=6009
 
 # Expose the port
-EXPOSE 6006
+EXPOSE 6009
 
 CMD ["/app/main"]
