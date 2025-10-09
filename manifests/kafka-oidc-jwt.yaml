@@ -1,0 +1,360 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm-local
+data:
+  local-realm.json: |
+    {
+      "realm": "local",
+      "enabled": true,
+      "clients": [
+        {
+          "clientId": "dapr-kafka",
+          "secret": "dapr-kafka-secret",
+          "clientAuthenticatorType": "client-jwt",
+          "attributes": {
+            "token.endpoint.auth.signing.alg": "RS256",
+            "jwt.credential.certificate": "-----BEGIN CERTIFICATE-----\nMIIEJTCCAg2gAwIBAgIUS0RIkoWlMVd8UfE/I7IEzKD4kmwwDQYJKoZIhvcNAQEL\nBQAwGDEWMBQGA1UEAwwNbG9jYWwtb2lkYy1jYTAeFw0yNTEwMDMxMDI3NDlaFw0y\nODAxMDYxMDI3NDlaMBsxGTAXBgNVBAMMEGRhcHItb2lkYy1jbGllbnQwggEiMA0G\nCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDQIqGyGGlQRqXNDlSuHRDGmnJ4dQDb\njK/KxeC+wXQiDCSfHgP7NOjZOOCiQYKAUs9MRg+tKepxFRORZLAbRlU9kuU4Z7bg\nE6wDMztCqTASUZtwZeN36iJDcQ++xnmAi8j0bvs7w00wrgPMXPnT09Sf9sQyEkR2\nt26OLcQnZHwrUWHIbZeXqvRF7uYG00GKjFmqI+FjrmDx0hoENew+Jzpk7S/7m5t2\nh/weVAr5REtGTIQxbX8nNmoO2JFbyILBcfP9M9R9zxiTEFVgP5sl2QfLFerPpULM\n1tAiCO+oPk8CAFiD9TKe+HR/Us4uIxgRmxjgBnzmFSJjDflvK2DslpzPAgMBAAGj\nZDBiMAsGA1UdDwQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDAjAdBgNVHQ4EFgQU\noCgedGjEdPHOBRq6OwKKGUmpUXIwHwYDVR0jBBgwFoAUImUtm30c0E0Z1Xsep9o/\nnXsqyGYwDQYJKoZIhvcNAQELBQADggIBAKafBCz1EUny2pKOI8xTHVkoZjhTvtm2\nLy2DicAEwtESXlBta64bOug4mTq8RLdKxLa8xSBSZxzygTfb+q8IcuuYL0/DAttZ\ni3fS0/nqQ9Yt+C8iqn5g/1NrC73//79Pge+F1uYLml3dVT5mYL3NFTJZVuNKVaWw\nYDe8CN02jy11n9jBz1jwwDPAN+dVwBYLI07lY08qIcStOcnzqxh90l2AV8GCtKAB\nfH/Xkh7zCPjGfYE9ISEdQ7wKVvpBZqenm4EyW/VVpAzQbHiVeRoOMqig1t8j288e\nttHKtpQMSqkiTQWQghG2AfgEQcra1voynz3aUvrETNtiKH8dOPDU24o/KTfDlySV\n+COnelx/wU+TDaPNwblf2dkU3O55oAb7CKiQgP/+AENQKUgDPPK9LZpouHa3DO8v\ngOTuOaaUnfzpVUeBKOSMc/ZBAbR8RheERtx2NI74yKQaqYBD4u3oYAATTn++VFMC\nbNmHMgCGDFd1pU/yFebdfJnAF2jXhan3YWXHlzkTp7cFbaMV5fWnFxxFV6PwEDrJ\nwhoqwvJvxOi9HaG4ICDBMjTt0qMFYuDbnmxxYvkIikRdrhd4f5iFptk8tKMdH2Wc\nW14MwwPOd2E+6MTfLgHOoPTpue6cqtj9MlGEG8U2Q10eaeGQtBnKpQ6ywed8aEWe\nQd9/zM51rS01\n-----END CERTIFICATE-----\n"
+          },
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "serviceAccountsEnabled": true,
+          "directAccessGrantsEnabled": false,
+          "standardFlowEnabled": false
+        },
+        {
+          "clientId": "kafka-broker",
+          "secret": "kafka-broker-secret",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "serviceAccountsEnabled": true,
+          "directAccessGrantsEnabled": false,
+          "standardFlowEnabled": false
+        }
+      ]
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:24.0.5
+        imagePullPolicy: IfNotPresent
+        args: ["start-dev", "--http-enabled=true", "--hostname-strict=false", "--import-realm"]
+        env:
+        - name: KEYCLOAK_ADMIN
+          value: "admin"
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          value: "admin"
+        - name: KC_HOSTNAME_URL
+          value: "http://keycloak.default.svc.cluster.local:8080"
+        ports:
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - name: realm-import
+          mountPath: /opt/keycloak/data/import
+      volumes:
+      - name: realm-import
+        configMap:
+          name: keycloak-realm-local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  type: ClusterIP
+  selector:
+    app: keycloak
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kafka-broker-oidc
+type: Opaque
+stringData:
+  client-secret: "kafka-broker-secret"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dapr-oidc
+type: Opaque
+stringData:
+  client-secret: "dapr-kafka-secret"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dapr-oidc-jwt
+type: Opaque
+stringData:
+  jwt.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIEJTCCAg2gAwIBAgIUS0RIkoWlMVd8UfE/I7IEzKD4kmwwDQYJKoZIhvcNAQEL
+    BQAwGDEWMBQGA1UEAwwNbG9jYWwtb2lkYy1jYTAeFw0yNTEwMDMxMDI3NDlaFw0y
+    ODAxMDYxMDI3NDlaMBsxGTAXBgNVBAMMEGRhcHItb2lkYy1jbGllbnQwggEiMA0G
+    CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDQIqGyGGlQRqXNDlSuHRDGmnJ4dQDb
+    jK/KxeC+wXQiDCSfHgP7NOjZOOCiQYKAUs9MRg+tKepxFRORZLAbRlU9kuU4Z7bg
+    E6wDMztCqTASUZtwZeN36iJDcQ++xnmAi8j0bvs7w00wrgPMXPnT09Sf9sQyEkR2
+    t26OLcQnZHwrUWHIbZeXqvRF7uYG00GKjFmqI+FjrmDx0hoENew+Jzpk7S/7m5t2
+    h/weVAr5REtGTIQxbX8nNmoO2JFbyILBcfP9M9R9zxiTEFVgP5sl2QfLFerPpULM
+    1tAiCO+oPk8CAFiD9TKe+HR/Us4uIxgRmxjgBnzmFSJjDflvK2DslpzPAgMBAAGj
+    ZDBiMAsGA1UdDwQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDAjAdBgNVHQ4EFgQU
+    oCgedGjEdPHOBRq6OwKKGUmpUXIwHwYDVR0jBBgwFoAUImUtm30c0E0Z1Xsep9o/
+    nXsqyGYwDQYJKoZIhvcNAQELBQADggIBAKafBCz1EUny2pKOI8xTHVkoZjhTvtm2
+    Ly2DicAEwtESXlBta64bOug4mTq8RLdKxLa8xSBSZxzygTfb+q8IcuuYL0/DAttZ
+    i3fS0/nqQ9Yt+C8iqn5g/1NrC73//79Pge+F1uYLml3dVT5mYL3NFTJZVuNKVaWw
+    YDe8CN02jy11n9jBz1jwwDPAN+dVwBYLI07lY08qIcStOcnzqxh90l2AV8GCtKAB
+    fH/Xkh7zCPjGfYE9ISEdQ7wKVvpBZqenm4EyW/VVpAzQbHiVeRoOMqig1t8j288e
+    ttHKtpQMSqkiTQWQghG2AfgEQcra1voynz3aUvrETNtiKH8dOPDU24o/KTfDlySV
+    +COnelx/wU+TDaPNwblf2dkU3O55oAb7CKiQgP/+AENQKUgDPPK9LZpouHa3DO8v
+    gOTuOaaUnfzpVUeBKOSMc/ZBAbR8RheERtx2NI74yKQaqYBD4u3oYAATTn++VFMC
+    bNmHMgCGDFd1pU/yFebdfJnAF2jXhan3YWXHlzkTp7cFbaMV5fWnFxxFV6PwEDrJ
+    whoqwvJvxOi9HaG4ICDBMjTt0qMFYuDbnmxxYvkIikRdrhd4f5iFptk8tKMdH2Wc
+    W14MwwPOd2E+6MTfLgHOoPTpue6cqtj9MlGEG8U2Q10eaeGQtBnKpQ6ywed8aEWe
+    Qd9/zM51rS01
+    -----END CERTIFICATE-----
+  jwt.key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDQIqGyGGlQRqXN
+    DlSuHRDGmnJ4dQDbjK/KxeC+wXQiDCSfHgP7NOjZOOCiQYKAUs9MRg+tKepxFROR
+    ZLAbRlU9kuU4Z7bgE6wDMztCqTASUZtwZeN36iJDcQ++xnmAi8j0bvs7w00wrgPM
+    XPnT09Sf9sQyEkR2t26OLcQnZHwrUWHIbZeXqvRF7uYG00GKjFmqI+FjrmDx0hoE
+    New+Jzpk7S/7m5t2h/weVAr5REtGTIQxbX8nNmoO2JFbyILBcfP9M9R9zxiTEFVg
+    P5sl2QfLFerPpULM1tAiCO+oPk8CAFiD9TKe+HR/Us4uIxgRmxjgBnzmFSJjDflv
+    K2DslpzPAgMBAAECggEAW3BbiVqgKdxfyw6YtUWfsSD5WWJN1iagtHzql+N1md+r
+    1xvgs+Qyx/vs9FvDcYzv9ZpyGKlpjfSsfBu4IsNrf3mhqn4mIZuC3oULa+XYcLPZ
+    ji+1F2GNXAO33yBjEM5Yosp/JWpP5ysMECRovV868mv/FeBgo6dCssP4gTXsNzrl
+    4vNEA8NJWRV4J9GcCUQpDLqfmvvfADC2eqQo+4sQWTEsguiQaN4hTps+orspL2oi
+    xswzmJZeCxKOm1tBnSkMbTiaged9hD++6OX8BnfJ9Mhz5C1/zCb26Lmh524Xd/RO
+    2EURl+1ZJuufZGlPhDeQPJMAk4VkY7FD7JfFeQlVwQKBgQD+yLQaMGdfjd3GloBq
+    SBHhiyjxGhdCZRI3m4BiFuwqmTlseZLJ3BPLmrHaab0pKBbFVO+bmDKrdhNFNiPh
+    Q5Di8B+8yycOa8l4aK3DhW0FOkJ+Qo0zdKpKVgPz4EAozOmFMBTn3G3ULsKfGCyD
+    IkMEZ44rrYkWWkE4tDXLYAW34wKBgQDRIO60d6Fba3guL90DjHPnkz8dVabSVSC0
+    kiesKAxdgQBSKQEtokqPAUgFMFa6vfC6qAGaG+hM2H+lOLCJX+jORktK48pCPhAi
+    q2qIxiiS/etRaLvWx9xCgolVrmK883kRYlofZZU3Ev4Ym67Y0NZMM01O9TRFtjzb
+    x3ILehUjJQKBgBeOILCHJxd7ezR/95Fb5mNOxVM9EUdvJrcDZmQrMFxj3B4+Qybs
+    dNwPCkBiJD3o2eoWhyyAbrbRbMiqT7jk0UFZ5+VBdvPrXS4Hp4D7FfA0ya74oitO
+    ruu+dhEW+3eKMlDA+D3TcEf8pruktYDOKxn+JPO+0HzDjWIbrxmFYCH3AoGBAKSW
+    saew+3pS06wuGVjgopvgRG0W6wtg2jOjT7vrbQfuLk17XiUHNHzmOkNzLt8b/Ck7
+    br9WNXa9cYCcZDxKEpS9uCZBrv6Bj/tpQ5hPtMEzPI++yQ8aDtz9lY6sh6NET8WB
+    zYImVdCZjwfZBzw26GHignag/znaWn1ys+waciZNAoGBAMsjUlHdR1NtLW8YaMk4
+    3CDvBdjYUJUUvrTfiCaPoiGDO4OEEDhG+NISV8uSnrB1+IAb4EgZVjsn+zj+wqdC
+    3pqnADNpMZonyGg7joJNOMWtD3ZY43EAC3glejPaO8Ll5c1cpkBxrhBv07xhS+w0
+    E4DYXO3TESIBB0kAhb1c0PuX
+    -----END PRIVATE KEY-----
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: keycloak-bootstrap
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: bootstrap
+        image: curlimages/curl:8.10.1
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -lc
+        - |
+          set -euo pipefail
+          echo "Waiting for Keycloak..."
+          until curl -sSf http://keycloak:8080/realms/master/.well-known/openid-configuration >/dev/null; do sleep 2; done
+          echo "Keycloak up. Ensuring realm exists (realm imported via Deployment)."
+          # Nothing else to do because realm is imported on start
+
+
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: kafka-pool
+  labels:
+    strimzi.io/cluster: kafka
+spec:
+  replicas: 1
+  roles:
+    - controller
+    - broker
+  storage:
+    type: ephemeral
+---
+
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: kafka
+spec:
+  kafka:
+    version: 4.1.0
+    metadataVersion: 4.1-IV1
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+        authentication:
+          type: oauth
+          clientId: kafka-broker
+          clientSecret:
+            secretName: kafka-broker-oidc
+            key: client-secret
+          tokenEndpointUri: http://keycloak.default.svc.cluster.local:8080/realms/local/protocol/openid-connect/token
+          validIssuerUri: http://keycloak.default.svc.cluster.local:8080/realms/local
+          jwksEndpointUri: http://keycloak.default.svc.cluster.local:8080/realms/local/protocol/openid-connect/certs
+          checkAudience: false
+          accessTokenIsJwt: true
+
+    config:
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+      inter.broker.protocol.version: "3.7"
+      sasl.enabled.mechanisms: OAUTHBEARER
+      sasl.mechanism.inter.broker.protocol: OAUTHBEARER
+    tls:
+      trustedCertificates: []
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-mtls-ca
+type: Opaque
+stringData:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIFETCCAvmgAwIBAgIUb2Cx9cl0TATGpZ/WrwiRj5JImIUwDQYJKoZIhvcNAQEL
+    BQAwGDEWMBQGA1UEAwwNbG9jYWwtb2lkYy1jYTAeFw0yNTEwMDMxMDI3NDBaFw0z
+    NTEwMDExMDI3NDBaMBgxFjAUBgNVBAMMDWxvY2FsLW9pZGMtY2EwggIiMA0GCSqG
+    SIb3DQEBAQUAA4ICDwAwggIKAoICAQD3sKIprbHo2vzyEhaGg58HHD1XtD2sXYOj
+    0D+ZiroWES82JbxVeEAek7UqI2b/1aRMasbAvrCis5gV3PsQ5VnX5rAUdGhaIH9v
+    WnfIe0pz1Zjy+nBOFWZn2IKO+lzYaX4L1MUKs/OApQyfTSAzhVG720ai9wtTwlwm
+    S2XZEehjHFMCvrXvRxUaYfJGTn739X+VjlWvsvAGWMCg09bOi7I7nwBdW+Zczf4c
+    QQs36V/VHOJIvhNhmDznnRrMfXkkczyRrNEeaYi164Nx4YTjpnvCHurvRz/Px8X7
+    DsE0Yq33yK1LCpC0eRnNYdzztjN9uy9gRXmzVpvIc684THNJ/s1VCrQ0fJELtJlD
+    1hfnxg2Xb2MO0boVOJr/UI+59FmVlrg5WicHLtSw7UUTAB0e/mR6UZ74XDHvr7FD
+    k5bogd0gr6BjR5iCXJgGWST4PowNhgZW0Z0x7ht/ff52Mzfqv2kDGB+pkObLeQ8t
+    dr1uqsvqqr5jbEyEH9LVVmnMcNyHL056JAkYyrj3IoukQ1YtMP1PTdWYnwuVyoVR
+    ZgIcPPn6M9O3fBhCgBCnywFpfKa/C2G2p22RXA+lji13Ibp2MIu9WtKGpZeELdmf
+    zUt0ACXE+5iKKXQ0ttpeUceUJ1LGDsW912l/3attpn0AkYMgQTBtTdaPKxBFGqG0
+    fO4cdv1vnQIDAQABo1MwUTAdBgNVHQ4EFgQUImUtm30c0E0Z1Xsep9o/nXsqyGYw
+    HwYDVR0jBBgwFoAUImUtm30c0E0Z1Xsep9o/nXsqyGYwDwYDVR0TAQH/BAUwAwEB
+    /zANBgkqhkiG9w0BAQsFAAOCAgEAl+vKU9uYqh7qUGgdpQxWBGjJ5cFQb5KAzilC
+    eHvYCBbP7GMAyRP0mfsFd2UOTX5/y/mZtJ60xodh3YxztVPX3pJVCJEaf/jBsOAD
+    XiTSu0lWOnW6HOUsZ6CP0qDU1FXZSmowM+Y0zBzrcyWh6rk/mGzjtDYvvsSN2HWB
+    HfMnMfYU0lixgDkvS4XsXeIrBkmhjcKD44hlB3O3JXzICAzGIqorzSOkEKUecwuH
+    JmIwZHpwJo38sO1hA3nhnjkLBp2ZCZ3ikSmXStcii7OMUD9Q1fAbvqHSQ3thBpY5
+    8HuddxzQMSHw20HF1/59ve9vtd/rt/GET5lV0PoE73cHQ4jZ35h/GhYdYA42fpbl
+    B60AZdPyr+UKBZwR0xg4xjab0EykUtVskPf05kDi4n72IWSdaJrkjx3J/jML0GdZ
+    aBeD+pJ2x8AjmzN9okvGmIjZ+kZjkYzSX9Y7H62MYMq/vF9u1IvO5zG1PZYGoVsP
+    6FG4eC+HIouEqUgSrZ37vQkTw6dxNRFnHYCPdYTYKkwMtRLsAbErfyJ2IXwhiepm
+    lqbRGoxxBTdpB4s0VUXcjFWjE0kihu0UIgTD6HM2/AVjvz+cdj+qAM+NmMkHRMcW
+    s2wnzeHK+Uzge4u1ppkiWFczIcMDGXF2C7v/7jBTnnw/ZnqiQusBpDPVaUKkFvfS
+    bzMNS+k=
+    -----END CERTIFICATE-----
+
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-mtls-server-tls
+type: kubernetes.io/tls
+stringData:
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIEszCCApugAwIBAgIUS0RIkoWlMVd8UfE/I7IEzKD4kmswDQYJKoZIhvcNAQEL
+    BQAwGDEWMBQGA1UEAwwNbG9jYWwtb2lkYy1jYTAeFw0yNTEwMDMxMDI3NDVaFw0y
+    ODAxMDYxMDI3NDVaMDIxMDAuBgNVBAMMJ2tleWNsb2FrLW10bHMuZGVmYXVsdC5z
+    dmMuY2x1c3Rlci5sb2NhbDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+    AL3M2vQrSNJ7H3uEUSbXcNtnj0y5iEg9ANoPG+PX14DTjxPa0EJ76jToiycL62aE
+    GpPhlDdANBy7WquPMZPfuYnQW2e45a4VhcHEWv6wHKsAjeM/F2AOGmh+7w2nv46a
+    PlQJkCFl9cD1tbeM/InZX/YTvVrEJrrIluyp+TJ4n+v7pkxEkQ7xQB9ctd4orVmP
+    0C/QI2TITceLDNXlrK5CVxLkT98NravQrkenvyJ7h1hioOtG4owUS/5Bp3iPL2f6
+    2xB+0tAYC7vhgiIVTk78LkkE44VdnxIAd+km2VrG/oPIfQ5iNF2hezqVce6iKvIZ
+    AlLWt00S8jplRCvL6HBxp9sCAwEAAaOB2jCB1zBzBgNVHREEbDBqgidrZXljbG9h
+    ay1tdGxzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWyCDWtleWNsb2FrLW10bHOC
+    FWtleWNsb2FrLW10bHMuZGVmYXVsdIIZa2V5Y2xvYWstbXRscy5kZWZhdWx0LnN2
+    YzALBgNVHQ8EBAMCBaAwEwYDVR0lBAwwCgYIKwYBBQUHAwEwHQYDVR0OBBYEFBHw
+    PoLy9K6CCDCwOpwOtg8frMB7MB8GA1UdIwQYMBaAFCJlLZt9HNBNGdV7HqfaP517
+    KshmMA0GCSqGSIb3DQEBCwUAA4ICAQAIfRca9AwOSUue3/nJX6Enj9M6ZI+04OeB
+    Mqx1++4aQBHvKJQz/6iD06nXMyro4VMV7tcHuFyQnEmu1gZCK9gbL+uqRSzBC6pA
+    dMVgUnpOAT6bVGcBjMsLFJpe1VSDxjpfPrhC+CGFf53xLb4WiOJawe1K6/jqT/D5
+    zJL/DUbGpNEdx1SCvfCvceLvhEKn0IZd4kqK/vOzRe8VoRmJnriqEqjiXnMaJJcc
+    /lsBjVy0sqN0y4CRgYrMDqH846tfsuzq69fv/ZzmbFBtd6w+rJYvElT++zf0X4vG
+    wCexfODCOgeY63KkPgfM2qwANrYP0CBbz7K62guwvjlLTbEr/Xd6YsFjPEP+q/Zi
+    8fcUuea7j8Qa4Bk1dLGRAtFLKaaAyDPdQWEJEnV8OtB2xW6VrJxImB1m7uaRdWqL
+    HTj6zGPfNQ0Vi8u3f520t4fxnCMZiMUWbfV0qTCc1sGO9SqZdxVpWX0aQRhpPt9E
+    zvoM4QseHuS3FsT3feWlQ+so97k/Ix1k9xJRP82kvRSa5gBtzpmsNRGG7ArjPRjO
+    BqH4MnRlZ562laGKdbkdzAhNyrdIe7bStU/p4rtOce+abXNnrjZckjDzC0OyR//2
+    rJo5J6MhB8je+UDaJzuHwPPUcCbgK9ES2h6g4fN5XAxGQms1CfVKAE6EUtACLKam
+    rkIIQXps8w==
+    -----END CERTIFICATE-----
+
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC9zNr0K0jSex97
+    hFEm13DbZ49MuYhIPQDaDxvj19eA048T2tBCe+o06IsnC+tmhBqT4ZQ3QDQcu1qr
+    jzGT37mJ0FtnuOWuFYXBxFr+sByrAI3jPxdgDhpofu8Np7+Omj5UCZAhZfXA9bW3
+    jPyJ2V/2E71axCa6yJbsqfkyeJ/r+6ZMRJEO8UAfXLXeKK1Zj9Av0CNkyE3HiwzV
+    5ayuQlcS5E/fDa2r0K5Hp78ie4dYYqDrRuKMFEv+Qad4jy9n+tsQftLQGAu74YIi
+    FU5O/C5JBOOFXZ8SAHfpJtlaxv6DyH0OYjRdoXs6lXHuoiryGQJS1rdNEvI6ZUQr
+    y+hwcafbAgMBAAECggEASg19eDrTJNxJAkYz63WvYMtdC9Bvrc+vX2T5usHiIS9p
+    6ZM8IlR6or4AXPG3nL36KKygyZXRP0ySKdGqxElL+MtEfomTg4J+N4XHAwvvg4Cp
+    23ooQp/+CbtMxgUnJhpkKyG4DG/dnLXBeqYVeitH15kIDjvt6H6O9DO1OM37h3Rw
+    OXseuY9p2QYv5bbsr+jROBBEY8GTsWHmCaan8sKPiGsi/JJ3ZEbnsMt/KyzxEQ9p
+    Y5tkldQsQwmHhn4xGO38pI4VXX559IFchJBGe51Aat5dRqysS3qGvzzysdohOgaU
+    9fTuZghqO3B+0AjT/1/VfVKHhbp3qX4miyIbm79XUQKBgQD+hx6Dzja5kNd5fto6
+    UJWtuumlDIh5vgAue9Zm4rj3Yd+WkJa7cpIVUKaoZXbrGk+Nlo8zYQ5u6u0rEIWW
+    FNB3hls2GBa6HFrzb++myK9N49mlaaOl5SOePACvZY7h0QNjYzykpp2CPGCgsdFS
+    I890DYnQSfXZPCz4UXIgwHz0fQKBgQC+5eTA0QQthyvm5KJseqKe6ecR1luBl1AL
+    oR2xjBPAxoRW38Knv7gZqJ7apCXTqttyIb/999r476FZtJwsvxTJrIMa2c5suZ9/
+    FA3LxKfxZNc5Aw7c9e4bt1L1AgGEcDa+WyyQ6BrbVvaKtak4WxLxb3MZRLsMf7GJ
+    u4xP1Ax1NwKBgBoUSCkjKPJMh/d36u5MsXlyjFwP86/dqvEYWTiDhIY8bgdkWz1r
+    mNI8SEc61jtyn7IXOib+i9cLlS9zauycx1tn1dKuFy4Ml7kXwAtrxqKJdRSAxXbL
+    CqI87akLE9/JZbp6QY1xUPQ2MYRlk9gBuVDfzj4cRedzRfxPhA0dC/CVAoGAULnj
+    DG7XN3GL7S4OSZVqo40CPBbLx3d3UBOn/Obhi4nneN1S8aEvdxpJYug7XtFHz3Ha
+    QMnJfa/IKakoyftcDRS4tGga1PuCKTkPxHW7F2evY9qZNHODZ5EUsatRfPH/FGx1
+    4illAhA6XdoIX16UGikpISxhdR2itD3tTey7/+0CgYEA32GLE04f52TAvFw1Focp
+    4oFxq+jwGgyZ0q9Ksr01EolhsibpvKdzkkAh49t8RlRv9oUyIekFSj5nT+0WTBqS
+    uAyfWDHVGTtL+graqyUFl1E7BcCo8z7ufmiTyHWqU+GSqt7AR7x7ktYR53MT5kWE
+    eykxpVHB8QVhfuB1S5FXsBY=
+    -----END PRIVATE KEY-----
+

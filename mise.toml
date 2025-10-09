@@ -3,6 +3,7 @@ tilt = "0.35.1"
 go = "1.24.4"
 kind = "0.29.0"
 java = "openjdk-21"
+helm = "3.19.0"
 
 [tasks.gen_go]
 run = [
@@ -29,6 +30,12 @@ run = [
 depends = ['cluster-down', 'cluster-up']
 
 [tasks.tilt-up]
+run = [
+  'tilt up',
+]
+
+[tasks.tilt-up-e2e]
+dir = 'e2e'
 run = [
   'tilt up',
 ]

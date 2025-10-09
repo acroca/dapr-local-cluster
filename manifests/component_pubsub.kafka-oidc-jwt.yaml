@@ -14,10 +14,18 @@ spec:
     value: "http://keycloak.default.svc.cluster.local:8080/realms/local/protocol/openid-connect/token"
   - name: oidcClientID
     value: "dapr-kafka"
-  - name: oidcClientSecret
+  - name: oidcClientAuthMethod
+    value: "client_jwt"
+  - name: oidcClientAssertionCert
     secretKeyRef:
-      name: dapr-oidc
-      key: client-secret
+      name: dapr-oidc-jwt
+      key: jwt.crt
+  - name: oidcClientAssertionKey
+    secretKeyRef:
+      name: dapr-oidc-jwt
+      key: jwt.key
+  - name: oidcAudience
+    value: "http://keycloak.default.svc.cluster.local:8080/realms/local"
   - name: oidcScopes
     value: "openid"
   - name: disableTls
