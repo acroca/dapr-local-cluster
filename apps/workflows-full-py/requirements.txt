@@ -1,0 +1,7 @@
+# dapr-ext-grpc>=1.16.0
+# dapr-ext-workflow>=1.16.0
+# dapr>=1.15.0
+# dapr-ext-grpc @ git+https://github.com/dapr/python-sdk.git@main#subdirectory=ext/dapr-ext-grpc
+dapr-ext-workflow @ git+https://github.com/dapr/python-sdk.git@release-1.16#subdirectory=ext/dapr-ext-workflow
+dapr @ git+https://github.com/dapr/python-sdk.git@release-1.16
+flask>=2.3.0

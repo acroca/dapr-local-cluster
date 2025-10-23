@@ -1,0 +1,15 @@
+load('ext://uibutton', 'cmd_button')
+
+# Workflows service (Go)
+docker_build('localhost:5001/workflows-full-go', '.')
+k8s_yaml('manifests/deployment.yaml')
+k8s_resource(workload='workflows-full-go-1', resource_deps=['dapr'], labels=['apps'], port_forwards=['6020:6020'])
+k8s_resource(workload='workflows-full-go-2', resource_deps=['dapr'], labels=['apps'])
+k8s_resource(workload='workflows-full-go-3', resource_deps=['dapr'], labels=['apps'])
+
+cmd_button('workflows-full-go:start',
+            argv=['sh', '-c', 'curl --silent -X POST http://localhost:6020/start'],
+            resource='workflows-full-go-1',
+            icon_name='cloud_download',
+            text='start workflow',
+)

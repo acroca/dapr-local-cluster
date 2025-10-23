@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflows-full-py-1
+  labels:
+    app: workflows-full-py-1
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: workflows-full-py-1
+  template:
+    metadata:
+      labels:
+        app: workflows-full-py-1
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "workflows-full-py-1"
+        dapr.io/app-port: "6021"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-app-health-check: "true"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: workflows-full-py-1
+        image: localhost:5001/workflows-full-py:latest
+        ports:
+        - containerPort: 6021
+        env:
+        - name: APP_PORT
+          value: "6021"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflows-full-py-2
+  labels:
+    app: workflows-full-py-2
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: workflows-full-py-2
+  template:
+    metadata:
+      labels:
+        app: workflows-full-py-2
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "workflows-full-py-2"
+        dapr.io/app-port: "6021"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-app-health-check: "true"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: workflows-full-py-2
+        image: localhost:5001/workflows-full-py:latest
+        ports:
+        - containerPort: 6021
+        env:
+        - name: APP_PORT
+          value: "6021"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflows-full-py-3
+  labels:
+    app: workflows-full-py-3
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: workflows-full-py-3
+  template:
+    metadata:
+      labels:
+        app: workflows-full-py-3
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "workflows-full-py-3"
+        dapr.io/app-port: "6021"
+        dapr.io/app-protocol: "http"
+        dapr.io/enable-app-health-check: "true"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: workflows-full-py-3
+        image: localhost:5001/workflows-full-py:latest
+        ports:
+        - containerPort: 6021
+        env:
+        - name: APP_PORT
+          value: "6021"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

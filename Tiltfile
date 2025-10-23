@@ -6,8 +6,8 @@ k8s_kind('Job', pod_readiness='ignore')
 helm_repo('openzipkin', 'https://zipkin.io/zipkin-helm')
 helm_repo('dapr-helm-repo', 'https://dapr.github.io/helm-charts')
 
-pubsub_backend = 'kafka' # redis/kafka
-pubsub_variant = 'oidc-jwt' # oidc-jwt
+pubsub_backend = 'redis' # redis/kafka
+pubsub_variant = '' # oidc-jwt (kafka only)
 state_backend = 'redis' # redis/postgres
 
 dapr_release = 'dev' # use `dev` to build dapr from ../dapr instead of a release.
@@ -120,14 +120,15 @@ k8s_resource(
 
 
 # load_dynamic('apps/actors-go/Tiltfile')
-load_dynamic('apps/pub/Tiltfile')
-load_dynamic('apps/sub/Tiltfile')
+# load_dynamic('apps/pub/Tiltfile')
+# load_dynamic('apps/sub/Tiltfile')
 # load_dynamic('apps/workflows-py/Tiltfile')
 # load_dynamic('apps/workflows-crossapp/Tiltfile')
 # load_dynamic('apps/workflows-go/Tiltfile')
 # load_dynamic('apps/workflows-stress/Tiltfile')
 # load_dynamic('apps/dapr-agents/Tiltfile')
 # load_dynamic('apps/tracing-dotnet/Tiltfile')
+load_dynamic('apps/workflows-full-py/Tiltfile')
 
 
 
