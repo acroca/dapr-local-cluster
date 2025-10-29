@@ -1,0 +1,28 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+spec:
+  type: pubsub.pulsar
+  version: v1
+  metadata:
+  - name: host
+    value: "pulsar-broker.default.svc.cluster.local:6650"
+  - name: tenant
+    value: "public"
+  - name: namespace
+    value: "default"
+  - name: subscribeType
+    value: "key_shared"
+  - name: processMode
+    value: "sync"
+  - name: oauth2TokenURL
+    value: "http://pulsar-mock-oauth2.default.svc.cluster.local:8080/default/token"
+  - name: oauth2ClientID
+    value: "pulsar-client"
+  - name: oauth2ClientSecret
+    value: "pulsar-secret"
+  - name: oauth2Audiences
+    value: "pulsar"
+  - name: oauth2Scopes
+    value: "openid"

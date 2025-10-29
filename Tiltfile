@@ -6,7 +6,7 @@ k8s_kind('Job', pod_readiness='ignore')
 helm_repo('openzipkin', 'https://zipkin.io/zipkin-helm')
 helm_repo('dapr-helm-repo', 'https://dapr.github.io/helm-charts')
 
-pubsub_backend = 'redis' # redis/kafka
+pubsub_backend = 'redis' # redis/kafka/pulsar
 pubsub_variant = '' # oidc-jwt (kafka only)
 state_backend = 'redis' # redis/postgres
 
@@ -50,6 +50,17 @@ if pubsub_backend == 'kafka':
   else:
     k8s_yaml('manifests/kafka.yaml')
     k8s_resource(workload='kafka', labels=['core'])
+
+if pubsub_backend == 'pulsar':
+  helm_repo('apache', 'https://pulsar.apache.org/charts')
+  helm_resource('pulsar', 'apache/pulsar',
+                flags=['--values=./manifests/pulsar-helm.yaml'],
+                resource_deps=['apache'],
+                labels=['core'])
+  k8s_resource(workload='pulsar', labels=['core'])
+  k8s_yaml('manifests/pulsar.yaml')
+  k8s_resource(workload='pulsar-mock-oauth2:deployment', labels=['core'])
+  k8s_resource(workload='pulsar-mock-oauth2:service', labels=['core'])
 
 if dapr_release == 'dev':
   local_resource('dapr-images',
