@@ -1,16 +1,3 @@
-def load_e2e(name):
-  objects = read_yaml_stream("../../dapr/tests/config/%s.yaml" % name)
-  for o in objects:
-    o['metadata']['namespace'] = 'dapr-tests'
-    k8s_resource(
-      workload=o['metadata']['name'],
-      new_name=o['metadata']['name'] + '',
-      resource_deps=['dapr'],
-      labels=['e2e'],
-      pod_readiness="ignore"
-    )
-  k8s_yaml(encode_yaml_stream(objects))
-
 k8s_kind('Namespace')
 k8s_kind('Secret')
 k8s_kind('Role')
@@ -27,17 +14,21 @@ load('ext://namespace', 'namespace_create', 'namespace_inject')
 namespace_create('dapr-tests')
 k8s_resource(workload='dapr-tests', labels=['core'], pod_readiness="ignore")
 
-# local_resource('dapr',
-#                 cmd='''
-#                   mise exec dapr@1.15 -- dapr uninstall -k -n dapr-tests && \
-#                   mise exec dapr@1.15 -- dapr init -k -n dapr-tests --runtime-version 1.16.0-rc.3 --wait --enable-ha --enable-mtls
-#                 ''',
-#                 resource_deps=['dapr-tests'],
-#                 labels=['core'])
+local_resource('dapr-e2e-images',
+              dir='../../dapr',
+              cmd='make build-push-e2e-app-all',
+              env={
+                'DAPR_CACHE_REGISTRY': 'dapre2eacr.azurecr.io',
+                'DAPR_TEST_REGISTRY': 'localhost:5001',
+                'TARGET_OS': 'linux',
+                'TARGET_ARCH': 'arm64',
+                'DAPR_TAG': 'dev',
+              },
+              labels=['core'])
 
 local_resource('dapr-images',
               dir='../../dapr',
-              cmd='mise exec dapr@1.15 -- dapr uninstall -k -n dapr-tests && make build docker-push',
+              cmd='mise exec dapr@1.16 -- dapr uninstall -k -n dapr-tests && make build docker-push',
               env={
                 'HA_MODE': 'true',
                 'DAPR_REGISTRY': 'localhost:5001/dapr',
@@ -78,86 +69,28 @@ helm_resource('dapr', '../../dapr/charts/dapr',
              resource_deps=['dapr-images'],
              labels=['core'])
 
-helm_resource('redis', 'bitnami/redis',
-             release_name='redis',
-             namespace='dapr-tests',
-             flags=[
-                '--set', 'architecture=standalone',
-                '--set', 'auth.enabled=false',
-                '--set', 'master.resources.requests.memory=512Mi',
-                '--set', 'master.resources.requests.cpu=200m',
-                '--set', 'master.resources.limits.memory=1024Mi',
-                '--set', 'master.resources.limits.cpu=200m',
-                '--set', 'fullnameOverride=dapr-redis',
-              ],
-             resource_deps=['bitnami', 'dapr-tests'],
-             labels=['core'])
+local_resource('dapr-test-components',
+              dir='../../dapr',
+              cmd='make setup-test-components',
+              env={
+                'DAPR_TEST_NAMESPACE': 'dapr-tests',
+                'DAPR_NAMESPACE': 'dapr-tests',
+              },
+              resource_deps=['dapr'],
+              labels=['core'])
 
-helm_resource('zipkin', 'openzipkin/zipkin',
-             release_name='zipkin',
-             namespace='dapr-tests',
-             flags=['--set', 'zipkin.storage.type=mem'],
-             resource_deps=['openzipkin', 'dapr-tests'],
-             labels=['core'])
 
-helm_resource('postgres', 'bitnami/postgresql',
-             release_name='postgres',
-             namespace='dapr-tests',
-             flags=[
-                '--set', 'auth.database=dapr_test',
-                '--set', 'auth.username=dapr',
-                '--set', 'auth.password=dapr',
-                '--set', 'auth.postgresPassword=example',
-                '--set', 'fullnameOverride=dapr-postgres-postgresql',
-              ],
-             resource_deps=['bitnami', 'dapr-tests'],
-             labels=['core'])
+k8s_yaml('manifests/redis.yaml')
+k8s_resource(workload='redis', labels=['core'])
+k8s_resource(workload='dapr-redis', labels=['core'])
 
-load_e2e("dapr_observability_test_config")
-load_e2e("kubernetes_secret")
-load_e2e("kubernetes_secret_config")
-load_e2e("kubernetes_redis_secret")
-load_e2e("kubernetes_redis_host_config")
-load_e2e("kubernetes_actor_reminder_scheduler_config")
-load_e2e("dapr_postgres_state")
-load_e2e("dapr_postgres_state_actorstore")
-load_e2e("dapr_postgres_query_state")
-load_e2e("dapr_redis_pluggable_state")
-load_e2e("dapr_tests_cluster_role_binding")
-load_e2e("dapr_redis_pubsub")
-load_e2e("dapr_redis_configuration")
-load_e2e("pubsub_no_resiliency")
-load_e2e("kafka_pubsub")
-load_e2e("dapr_crypto_jwks")
-load_e2e("dapr_kafka_pluggable_bindings")
-load_e2e("dapr_kafka_bindings")
-load_e2e("dapr_kafka_bindings_custom_route")
-load_e2e("dapr_kafka_bindings_grpc")
-load_e2e("app_topic_subscription_pluggable_pubsub")
-load_e2e("app_topic_subscription_pubsub")
-load_e2e("app_topic_subscription_pubsub_grpc")
-load_e2e("kubernetes_allowlists_config")
-load_e2e("kubernetes_allowlists_grpc_config")
-load_e2e("dapr_redis_state_query")
-load_e2e("dapr_redis_state_badhost")
-load_e2e("dapr_redis_state_badpass")
-load_e2e("dapr_vault_secretstore")
-load_e2e("uppercase")
-load_e2e("pipeline")
-load_e2e("pipeline_app")
-load_e2e("preview_configurations")
-load_e2e("app_topic_subscription_routing")
-load_e2e("app_topic_subscription_routing_grpc")
-load_e2e("resiliency")
-load_e2e("resiliency_kafka_bindings")
-load_e2e("resiliency_kafka_bindings_grpc")
-load_e2e("resiliency_redis_pubsub")
-load_e2e("dapr_in_memory_pubsub")
-load_e2e("dapr_in_memory_state")
-load_e2e("dapr_tracing_config")
-load_e2e("dapr_cron_binding")
-load_e2e("external_invocation_http_endpoint")
-load_e2e("grpcproxyserverexternal_service")
-load_e2e("externalinvocationcrd")
-load_e2e("omithealthchecks_config")
-load_e2e("external_invocation_http_endpoint_tls")
+# helm_resource('zipkin', 'openzipkin/zipkin',
+#              release_name='zipkin',
+#              namespace='dapr-tests',
+#              flags=['--set', 'zipkin.storage.type=mem'],
+#              resource_deps=['openzipkin', 'dapr-tests'],
+#              labels=['core'])
+
+k8s_yaml('manifests/postgres.yaml')
+k8s_resource(workload='postgres', objects=['postgres-config:ConfigMap'], labels=['core'])
+k8s_resource(workload='dapr-postgres-postgresql', labels=['core'])
