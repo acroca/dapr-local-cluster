@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bindings-py
+  labels:
+    app: bindings-py
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bindings-py
+  template:
+    metadata:
+      labels:
+        app: bindings-py
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "bindings-py"
+        dapr.io/app-port: "50051"
+        dapr.io/log-level: "debug"
+        dapr.io/app-protocol: "grpc"
+        # dapr.io/enable-app-health-check: "true"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: bindings-py
+        image: localhost:5001/bindings-py:latest
+        ports:
+        - containerPort: 50051
+        env:
+        - name: APP_PORT
+          value: "50051"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

@@ -1,0 +1,28 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: testbinding
+spec:
+  type: bindings.kafka
+  version: v1
+  metadata:
+  - name: brokers
+    value: "kafka-bootstrap.default.svc.cluster.local:9092"
+  - name: authType
+    value: "password"
+  - name: saslUsername
+    value: "dapr"
+  - name: saslPassword
+    value: "dapr"
+  - name: saslMechanism
+    value: "plain"
+  - name: disableTls
+    value: "true"
+  - name: direction
+    value: "input, output"
+  - name: topics
+    value: sample,sample2
+  - name: publishTopic
+    value: sample2
+  - name: consumerGroup
+    value: group1

@@ -1,16 +1,18 @@
 load('ext://helm_resource', 'helm_resource', 'helm_repo')
 
+k8s_kind('Component', pod_readiness='ignore')
+k8s_kind('Configuration', pod_readiness='ignore')
 k8s_kind('Service', pod_readiness='ignore')
 k8s_kind('Job', pod_readiness='ignore')
 
 helm_repo('openzipkin', 'https://zipkin.io/zipkin-helm')
 helm_repo('dapr-helm-repo', 'https://dapr.github.io/helm-charts')
 
-pubsub_backend = 'redis' # redis/kafka/pulsar
+pubsub_backend = 'kafka' # redis/kafka/pulsar
 pubsub_variant = '' # oidc-jwt (kafka only)
 state_backend = 'redis' # redis/postgres
 
-dapr_release = 'dev' # use `dev` to build dapr from ../dapr instead of a release.
+dapr_release = '1.16.2' # use `dev` to build dapr from ../dapr instead of a release.
 
 helm_resource('zipkin', 'openzipkin/zipkin',
             flags=['--set', 'zipkin.storage.type=mem'],
@@ -118,17 +120,13 @@ pubsub_component = pubsub_backend
 if pubsub_variant:
   pubsub_component = '%s-%s' % (pubsub_component, pubsub_variant)
 k8s_yaml('manifests/component_config.yaml')
+k8s_resource(workload='daprconfig', labels=['core'], resource_deps=['dapr'])
 k8s_yaml('manifests/component_pubsub.%s.yaml' % pubsub_component)
+k8s_resource(workload='pubsub', labels=['core'], resource_deps=['dapr', pubsub_backend])
 k8s_yaml('manifests/component_state.%s.yaml' % state_backend)
+k8s_resource(workload='statestore', labels=['core'], resource_deps=['dapr', state_backend])
 k8s_yaml('manifests/component_workflowstate.%s.yaml' % state_backend)
-k8s_resource(
-  objects=['daprconfig', 'pubsub', 'statestore', 'workflowstatestore'],
-  new_name='components',
-  resource_deps=['dapr', state_backend, pubsub_backend],
-  labels=['core'],
-  pod_readiness='ignore'
-)
-
+k8s_resource(workload='workflowstatestore', labels=['core'], resource_deps=['dapr', state_backend])
 
 # load_dynamic('apps/actors-go/Tiltfile')
 # load_dynamic('apps/pub/Tiltfile')
@@ -139,7 +137,7 @@ k8s_resource(
 # load_dynamic('apps/workflows-stress/Tiltfile')
 # load_dynamic('apps/dapr-agents/Tiltfile')
 # load_dynamic('apps/tracing-dotnet/Tiltfile')
-load_dynamic('apps/workflows-full-py/Tiltfile')
-
-
+# load_dynamic('apps/workflows-full-py/Tiltfile')
+load_dynamic('apps/bindings-py/Tiltfile')
+# load_dynamic('apps/agent-simple/Tiltfile')
 

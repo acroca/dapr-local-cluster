@@ -1,0 +1,3 @@
+dapr-ext-grpc>=1.12.0
+dapr>=1.16.1rc1
+flask>=2.3.0

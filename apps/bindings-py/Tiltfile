@@ -1,0 +1,14 @@
+load('ext://uibutton', 'cmd_button')
+
+k8s_yaml('manifests/bindings.yaml')
+k8s_resource(workload='testbinding', resource_deps=['kafka'], labels=['core'])
+docker_build('localhost:5001/bindings-py', '.')
+k8s_yaml('manifests/deployment.yaml')
+k8s_resource(workload='bindings-py', resource_deps=['dapr', 'testbinding'], labels=['apps'], port_forwards=['6005:6005'])
+
+cmd_button('bindings-py:start',
+            argv=['sh', '-c', 'curl --silent -X POST http://localhost:6005/start'],
+            resource='bindings-py',
+            icon_name='cloud_download',
+            text='start workflow',
+)
