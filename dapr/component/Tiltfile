@@ -1,0 +1,14 @@
+def component(name, type, version, metadata=[]):
+  k8s_yaml( encode_yaml({
+    'apiVersion': 'dapr.io/v1alpha1',
+    'kind': 'Component',
+    'metadata': {
+      'name': name,
+    },
+    'spec': {
+      'type': type,
+      'version': version,
+      'initTimeout': '1m',
+      'metadata': metadata,
+    },
+  }))

@@ -1,0 +1,31 @@
+load('../component/Tiltfile', 'component')
+
+def redis():
+  k8s_yaml('./dapr/redis/redis.yaml')
+  k8s_resource(workload='redis', labels=['core'], port_forwards=['6379:6379'])
+
+  k8s_yaml('./dapr/redis/redis_insight.yaml')
+  k8s_resource(workload='redisinsight', resource_deps=['redis'], labels=['core'], port_forwards=['5540:5540'], links='http://localhost:5540/0/browser')
+
+def redis_pubsub_component(variant=''):
+  component('pubsub', 'pubsub.redis', 'v1', [
+    {'name': 'redisHost', 'value': 'redis-master.default.svc.cluster.local:6379'},
+    {'name': 'redisPassword', 'value': ''},
+  ])
+
+  k8s_resource(workload='pubsub', labels=['components'], resource_deps=['dapr', 'redis'])
+
+def redis_state_component():
+  component('statestore', 'state.redis', 'v1', [
+    {'name': 'redisHost', 'value': 'redis-master.default.svc.cluster.local:6379'},
+    {'name': 'redisPassword', 'value': ''},
+    {'name': 'actorStateStore', 'value': 'true'},
+  ])
+  k8s_resource(workload='statestore', labels=['components'], resource_deps=['dapr', 'redis'])
+
+def redis_workflowstate_component():
+  component('workflowstatestore', 'state.redis', 'v1', [
+    {'name': 'redisHost', 'value': 'redis-master.default.svc.cluster.local:6379'},
+    {'name': 'redisPassword', 'value': ''},
+  ])
+  k8s_resource(workload='workflowstatestore', labels=['components'], resource_deps=['dapr', 'redis'])

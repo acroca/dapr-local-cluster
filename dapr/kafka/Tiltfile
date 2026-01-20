@@ -1,0 +1,53 @@
+load('ext://helm_resource', 'helm_resource', 'helm_repo')
+load('../component/Tiltfile', 'component')
+
+def kafka_oidc_jwt():
+  k8s_kind('Kafka', pod_readiness='ignore')
+  # Deploy Strimzi Kafka Operator (for OAuth/OIDC support) and Keycloak IdP
+  helm_repo('strimzi-repo', 'https://strimzi.io/charts/', labels=['core'])
+  helm_resource('strimzi-kafka-operator', 'strimzi/strimzi-kafka-operator',
+                flags=['--set', 'watchAnyNamespace=true'],
+                resource_deps=['strimzi-repo'],
+                labels=['core'])
+
+  k8s_yaml('./dapr/kafka/kafka-oidc-jwt.yaml')
+  k8s_resource(objects=['keycloak-realm-local:ConfigMap:default'], new_name='keycloak-cm', labels=['core'])
+  k8s_resource(workload='keycloak:deployment', resource_deps=['keycloak-cm'], labels=['core'])
+  k8s_resource(workload='keycloak-bootstrap', resource_deps=['keycloak:deployment'], labels=['core'])
+  k8s_resource(workload='keycloak:service', resource_deps=['keycloak:deployment'], labels=['core'])
+  # k8s_resource(objects=['kafka-pool:KafkaNodePool:default'], new_name='kafka-nodepool', resource_deps=['strimzi-kafka-operator', 'keycloak:deployment'], labels=['core'])
+  k8s_resource(workload='kafka', resource_deps=['strimzi-kafka-operator', 'keycloak:deployment'], labels=['core'])
+
+def kafka(variant=''):
+  if variant == 'oidc-jwt':
+    kafka_oidc_jwt()
+  else:
+    k8s_yaml('./dapr/kafka/kafka.yaml')
+    k8s_resource(workload='kafka', labels=['core'])
+
+
+def kafka_pubsub_component(variant=''):
+  if variant == 'oidc-jwt':
+    component('pubsub', 'pubsub.kafka', 'v1', [
+      {'name': 'brokers', 'value': 'kafka-kafka-bootstrap.default.svc.cluster.local:9092'},
+      {'name': 'authType', 'value': 'oidc'},
+      {'name': 'oidcTokenEndpoint', 'value': 'http://keycloak.default.svc.cluster.local:8080/realms/local/protocol/openid-connect/token'},
+      {'name': 'oidcClientID', 'value': 'dapr-kafka'},
+      {'name': 'oidcClientAuthMethod', 'value': 'client_jwt'},
+      {'name': 'oidcClientAssertionCert', 'secretKeyRef': {'name': 'dapr-oidc-jwt', 'key': 'jwt.crt'}},
+      {'name': 'oidcClientAssertionKey', 'secretKeyRef': {'name': 'dapr-oidc-jwt', 'key': 'jwt.key'}},
+      {'name': 'oidcAudience', 'value': 'http://keycloak.default.svc.cluster.local:8080/realms/local'},
+      {'name': 'oidcScopes', 'value': 'openid'},
+      {'name': 'disableTls', 'value': 'true'},
+    ])
+  else:
+    component('pubsub', 'pubsub.kafka', 'v1', [
+      {'name': 'brokers', 'value': 'kafka-bootstrap.default.svc.cluster.local:9092'},
+      {'name': 'authType', 'value': 'password'},
+      {'name': 'saslUsername', 'value': 'dapr'},
+      {'name': 'saslPassword', 'value': 'dapr'},
+      {'name': 'saslMechanism', 'value': 'plain'},
+      {'name': 'disableTls', 'value': 'true'},
+    ])
+  k8s_resource(workload='pubsub', labels=['components'], resource_deps=['dapr', 'kafka'])
+

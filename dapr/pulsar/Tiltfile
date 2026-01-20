@@ -1,0 +1,28 @@
+load('ext://helm_resource', 'helm_resource', 'helm_repo')
+load('../component/Tiltfile', 'component')
+
+def pulsar():
+  helm_repo('apache-repo', 'https://pulsar.apache.org/charts', labels=['core'])
+  helm_resource('pulsar', 'apache/pulsar',
+                flags=['--values=./manifests/pulsar-helm.yaml'],
+                resource_deps=['apache-repo'],
+                labels=['core'])
+  k8s_resource(workload='pulsar', labels=['core'])
+  k8s_yaml('manifests/pulsar.yaml')
+  k8s_resource(workload='pulsar-mock-oauth2:deployment', labels=['core'])
+  k8s_resource(workload='pulsar-mock-oauth2:service', labels=['core'])
+
+def pulsar_pubsub_component(variant=''):
+  component('pubsub', 'pubsub.pulsar', 'v1', [
+    {'name': 'host', 'value': 'pulsar-broker.default.svc.cluster.local:6650'},
+    {'name': 'tenant', 'value': 'public'},
+    {'name': 'namespace', 'value': 'default'},
+    {'name': 'subscribeType', 'value': 'key_shared'},
+    {'name': 'processMode', 'value': 'sync'},
+    {'name': 'oauth2TokenURL', 'value': 'http://pulsar-mock-oauth2.default.svc.cluster.local:8080/default/token'},
+    {'name': 'oauth2ClientID', 'value': 'pulsar-client'},
+    {'name': 'oauth2ClientSecret', 'value': 'pulsar-secret'},
+    {'name': 'oauth2Audiences', 'value': 'pulsar'},
+    {'name': 'oauth2Scopes', 'value': 'openid'},
+  ])
+  k8s_resource(workload='pubsub', labels=['components'], resource_deps=['dapr', 'pulsar'])

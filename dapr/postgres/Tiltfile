@@ -1,0 +1,18 @@
+load('../component/Tiltfile', 'component')
+
+def postgres():
+  k8s_yaml('./dapr/postgres/postgres.yaml')
+  k8s_resource(workload='postgres', objects=['postgres-config:ConfigMap:default'], labels=['core'])
+
+def postgres_state_component():
+  component('statestore', 'state.postgresql', 'v2', [
+    {'name': 'connectionString', 'value': 'postgres://dapr:dapr@dapr-postgres-postgresql.default.svc.cluster.local:5432/dapr_test'},
+    {'name': 'actorStateStore', 'value': 'true'},
+  ])
+  k8s_resource(workload='statestore', labels=['components'], resource_deps=['dapr', 'postgres'])
+
+def postgres_workflowstate_component():
+  component('workflowstatestore', 'state.postgresql', 'v2', [
+    {'name': 'connectionString', 'value': 'postgres://dapr:dapr@dapr-postgres-postgresql.default.svc.cluster.local:5432/dapr_test'},
+  ])
+  k8s_resource(workload='workflowstatestore', labels=['components'], resource_deps=['dapr', 'postgres'])

@@ -1,0 +1,9 @@
+load('ext://helm_resource', 'helm_resource', 'helm_repo')
+
+def zipkin():
+  helm_repo('openzipkin-repo', 'https://zipkin.io/zipkin-helm', labels=['core'])
+  helm_resource('zipkin', 'openzipkin/zipkin',
+              flags=['--set', 'zipkin.storage.type=mem'],
+              resource_deps=['openzipkin-repo'],
+              labels=['core'],
+              port_forwards=['9411:9411'])
