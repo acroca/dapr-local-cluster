@@ -1,10 +1,10 @@
 load('../component/Tiltfile', 'component')
 
 def redis():
-  k8s_yaml('./dapr/redis/redis.yaml')
+  k8s_yaml('./tools/redis/redis.yaml')
   k8s_resource(workload='redis', labels=['core'], port_forwards=['6379:6379'])
 
-  k8s_yaml('./dapr/redis/redis_insight.yaml')
+  k8s_yaml('./tools/redis/redis_insight.yaml')
   k8s_resource(workload='redisinsight', resource_deps=['redis'], labels=['core'], port_forwards=['5540:5540'], links='http://localhost:5540/0/browser')
 
 def redis_pubsub_component(variant=''):

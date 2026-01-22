@@ -1,22 +1,19 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 from time import sleep
 import logging
 import os
-import signal
-import sys
-import threading
 
 from flask import Flask, request, jsonify
-from dapr.ext.workflow import DaprWorkflowClient, WorkflowRuntime, DaprWorkflowContext, WorkflowActivityContext
+from dapr.ext.workflow import DaprWorkflowClient, DaprWorkflowContext, WorkflowActivityContext, WorkflowRuntime
 
-workflow_name = "test_workflow"
-workflow_runtime = WorkflowRuntime()
+wfr = WorkflowRuntime()
+wfClient = DaprWorkflowClient()
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('Workflows')
 
 app = Flask(__name__)
-wfClient = None
 
 @app.route('/healthz', methods=['GET'])
 def health_check():
@@ -26,9 +23,6 @@ def health_check():
 @app.route('/start', methods=['POST'])
 def start_workflow():
     """Start a new workflow instance"""
-    global wfClient
-    if wfClient is None:
-        wfClient = DaprWorkflowClient()
 
     try:
         # Get input from request body or use a default counter
@@ -72,14 +66,17 @@ def start_workflow():
         logger.error(f"Error starting workflow: {str(e)}")
         return jsonify({"error": f"Failed to start workflow: {str(e)}"}), 500
 
-@workflow_runtime.workflow(name=workflow_name)
+@wfr.workflow
 def test_workflow(ctx: DaprWorkflowContext, wf_input: str):
-    logger.debug(f'Workflow {workflow_name} started. Input: {wf_input}')
+    logger.debug(f'Workflow test_workflow started. Input: {wf_input}')
+    numbers = []
     number = yield ctx.call_activity(random_number_generator)
-    logger.debug(f'Workflow {workflow_name} completed. Number: {number}')
-    return "Workflow completed with number: " + str(number)
+    numbers.append(str(number))
+    logger.debug(f'Workflow test_workflow completed. Number: {number}')
 
-@workflow_runtime.activity(name="random_number_generator")
+    return "Workflow completed with numbers: " + " ".join(numbers)
+
+@wfr.activity
 def random_number_generator(ctx: WorkflowActivityContext):
     logger.debug(f'Random number activity started')
     number = random.randint(0, 100000)
@@ -87,8 +84,8 @@ def random_number_generator(ctx: WorkflowActivityContext):
     return number
 
 def main():
-    workflow_runtime.start()
-    app_port = os.getenv('APP_PORT', 6005)
+    wfr.start()
+    app_port = int(os.getenv('APP_PORT', 6005))
     # Start Flask server
     logger.info(f"Starting HTTP server on port {app_port}")
     app.run(host='0.0.0.0', port=app_port, debug=False)

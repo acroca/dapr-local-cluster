@@ -1,9 +1,19 @@
 load('ext://uibutton', 'cmd_button')
 
 # Workflows service (Python)
-docker_build('localhost:5001/workflows-py', '.')
+# docker_build('localhost:5001/workflows-py', '.')
+local_resource(
+  'workflows-py-image',
+  '''
+    docker buildx build -t localhost:5001/workflows-py:latest --build-context python-sdk=../../../python-sdk --build-context durabletask-python=../../../durabletask-python . &&
+    docker push localhost:5001/workflows-py:latest &&
+    tilt trigger workflows-py
+  ''',
+  labels=['apps'],
+  deps=['.', '../../../python-sdk', '../../../durabletask-python'],
+)
 k8s_yaml('manifests/deployment.yaml')
-k8s_resource(workload='workflows-py', resource_deps=['dapr'], labels=['apps'], port_forwards=['6005:6005'])
+k8s_resource(workload='workflows-py', resource_deps=['dapr', 'workflows-py-image'], labels=['apps'], port_forwards=['6005:6005'])
 
 cmd_button('workflows-py:start',
             argv=['sh', '-c', 'curl --silent -X POST http://localhost:6005/start'],

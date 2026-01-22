@@ -1,6 +1,31 @@
-load('./dapr/Tiltfile', 'dapr')
-dapr(version="1.16.6", pubsub_backend='redis', pubsub_variant='', state_backend='redis')
+load('./tools/dapr/Tiltfile', 'dapr')
+load('./tools/zipkin/Tiltfile', 'zipkin')
+load('./tools/redis/Tiltfile', 'redis', 'redis_pubsub_component', 'redis_state_component', 'redis_workflowstate_component')
+load('./tools/postgres/Tiltfile', 'postgres', 'postgres_state_component', 'postgres_workflowstate_component')
+load('./tools/kafka/Tiltfile', 'kafka', 'kafka_oidc_jwt', 'kafka_pubsub_component', 'kafka_kafka_oidc_jwt_pubsub_component')
+load('./tools/pulsar/Tiltfile', 'pulsar', 'pulsar_pubsub_component')
 
+local('helm repo update')
+zipkin()
+# dapr("dev")
+dapr("1.16.6")
+
+redis()
+# postgres()
+# kafka()
+# kafka_oidc_jwt()
+# pulsar()
+
+redis_pubsub_component()
+# pulsar_pubsub_component()
+# kafka_pubsub_component()
+# kafka_kafka_oidc_jwt_pubsub_component()
+
+redis_state_component()
+# postgres_state_component()
+
+redis_workflowstate_component()
+# postgres_workflowstate_component()
 
 # load_dynamic('apps/actors-go/Tiltfile')
 # load_dynamic('apps/pub/Tiltfile')

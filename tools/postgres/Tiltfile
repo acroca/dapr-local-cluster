@@ -1,7 +1,7 @@
 load('../component/Tiltfile', 'component')
 
 def postgres():
-  k8s_yaml('./dapr/postgres/postgres.yaml')
+  k8s_yaml('./tools/postgres/postgres.yaml')
   k8s_resource(workload='postgres', objects=['postgres-config:ConfigMap:default'], labels=['core'])
 
 def postgres_state_component():

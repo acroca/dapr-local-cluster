@@ -1,11 +1,6 @@
 load('ext://helm_resource', 'helm_resource', 'helm_repo')
-load('./zipkin/Tiltfile', 'zipkin')
-load('./redis/Tiltfile', 'redis', 'redis_pubsub_component', 'redis_state_component', 'redis_workflowstate_component')
-load('./postgres/Tiltfile', 'postgres', 'postgres_state_component', 'postgres_workflowstate_component')
-load('./kafka/Tiltfile', 'kafka', 'kafka_pubsub_component')
-load('./pulsar/Tiltfile', 'pulsar', 'pulsar_pubsub_component')
 
-k8s_kind('Component')
+k8s_kind('Component', pod_readiness='ignore')
 
 def dapr_dev():
   local_resource('dapr-images',
@@ -64,37 +59,8 @@ def dapr_release(version='1.16.2'):
 
 
 
-def dapr(version='dev', pubsub_backend='redis', pubsub_variant='', state_backend='redis'):
-  local('helm repo update')
-  zipkin()
+def dapr(version='dev'):
   if version == 'dev':
     dapr_dev()
   else:
     dapr_release(version)
-
-  if pubsub_backend == 'redis' or state_backend == 'redis':
-    redis()
-  if state_backend == 'postgres':
-    postgres()
-  if pubsub_backend == 'kafka':
-    kafka(pubsub_variant)
-  if pubsub_backend == 'pulsar':
-    pulsar()
-
-  if pubsub_backend == 'redis':
-    redis_pubsub_component(pubsub_variant)
-  elif pubsub_backend == 'kafka':
-    kafka_pubsub_component(pubsub_variant)
-  elif pubsub_backend == 'pulsar':
-    pulsar_pubsub_component(pubsub_variant)
-  else:
-    fail('Unsupported pubsub backend: %s' % pubsub_backend)
-
-  if state_backend == 'redis':
-    redis_state_component()
-    redis_workflowstate_component()
-  elif state_backend == 'postgres':
-    postgres_state_component()
-    postgres_workflowstate_component()
-  else:
-    fail('Unsupported state backend: %s' % state_backend)
