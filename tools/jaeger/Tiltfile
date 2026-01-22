@@ -1,0 +1,46 @@
+load('ext://helm_resource', 'helm_resource', 'helm_repo')
+
+def jaeger():
+  k8s_kind('Instrumentation', pod_readiness='ignore')
+
+  helm_repo('jaegertracing-repo', 'https://jaegertracing.github.io/helm-charts', labels=['core'])
+  helm_repo('open-telemetry-repo', 'https://open-telemetry.github.io/opentelemetry-helm-charts', labels=['core'])
+
+  helm_resource('jaeger', 'jaegertracing-repo/jaeger',
+              flags=['--values=tools/jaeger/jaeger.yaml', '--version=3.4.1'],
+              resource_deps=['jaegertracing-repo'],
+              labels=['core'],
+              port_forwards=['16686:16686'])
+
+  helm_resource('otel-collector', 'open-telemetry-repo/opentelemetry-collector',
+              resource_deps=['open-telemetry-repo', 'jaeger'],
+              flags=['--values=tools/jaeger/collector.yaml'],
+              labels=['core'])
+  helm_resource('otel-operator', 'open-telemetry-repo/opentelemetry-operator',
+              resource_deps=['open-telemetry-repo'],
+              labels=['core'])
+
+
+  k8s_yaml(encode_yaml({
+    'apiVersion': 'opentelemetry.io/v1alpha1',
+    'kind': 'Instrumentation',
+    'metadata': {
+      'name': 'instrumentation',
+    },
+    'spec': {
+      'exporter': {
+        'endpoint': 'http://otel-collector-opentelemetry-collector.opentelemetry.svc.cluster.local:4318',
+      },
+      'propagators': [
+        'tracecontext',
+        'baggage',
+      ],
+      'sampler': {
+        'type': 'always_on',
+      },
+      'resource': {
+        'addK8sUIDAttributes': True,
+      },
+    },
+  }))
+  k8s_resource(workload='instrumentation', resource_deps=['otel-operator'], labels=['core'])

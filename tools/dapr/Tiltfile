@@ -67,7 +67,7 @@ def dapr(version='dev'):
   else:
     dapr_release(version)
 
-def dapr_config_component(zipkin_endpoint):
+def dapr_config_component(zipkin_endpoint=None, otel_endpoint=None):
   spec = {}
 
   if zipkin_endpoint:
@@ -75,6 +75,15 @@ def dapr_config_component(zipkin_endpoint):
       'samplingRate': '1',
       'zipkin': {
         'endpointAddress': zipkin_endpoint,
+      }
+    }
+  if otel_endpoint:
+    spec['tracing'] = {
+      'samplingRate': '1',
+      'otel': {
+        'endpointAddress': otel_endpoint,
+        'isSecure': False,
+        'protocol': 'grpc',
       }
     }
 

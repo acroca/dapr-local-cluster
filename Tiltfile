@@ -2,16 +2,21 @@ allow_k8s_contexts('kind-kind')
 
 load('./tools/dapr/Tiltfile', 'dapr', 'dapr_config_component')
 load('./tools/zipkin/Tiltfile', 'zipkin')
+load('./tools/jaeger/Tiltfile', 'jaeger')
 load('./tools/redis/Tiltfile', 'redis', 'redis_pubsub_component', 'redis_state_component', 'redis_workflowstate_component')
 load('./tools/postgres/Tiltfile', 'postgres', 'postgres_state_component', 'postgres_workflowstate_component')
 load('./tools/kafka/Tiltfile', 'kafka', 'kafka_oidc_jwt', 'kafka_pubsub_component', 'kafka_kafka_oidc_jwt_pubsub_component')
 load('./tools/pulsar/Tiltfile', 'pulsar', 'pulsar_pubsub_component')
 
 local('helm repo update')
-zipkin()
+# zipkin()
+jaeger()
 # dapr("dev")
-dapr("1.16.6")
-dapr_config_component(zipkin_endpoint='http://zipkin.default.svc.cluster.local:9411/api/v2/spans')
+dapr("1.17.0-rc.2")
+dapr_config_component(
+  # zipkin_endpoint='http://zipkin.default.svc.cluster.local:9411/api/v2/spans'
+  otel_endpoint='otel-collector-opentelemetry-collector.default.svc.cluster.local:4317'
+)
 
 redis()
 # postgres()
