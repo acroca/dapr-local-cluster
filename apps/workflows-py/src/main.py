@@ -1,10 +1,40 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import random
-from time import sleep
 import logging
 import os
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.semconv.resource import ResourceAttributes
+
+resource = Resource.create({
+    ResourceAttributes.SERVICE_NAME: "workflows-py",
+    ResourceAttributes.SERVICE_VERSION: "1.0.0",
+})
+
+tracer_provider = TracerProvider(resource=resource)
+trace.set_tracer_provider(tracer_provider)
+
+exporter = OTLPSpanExporter(
+    endpoint="http://otel-collector-opentelemetry-collector.default.svc.cluster.local:4317",
+    # headers={"uptrace-dsn": "workflows-py"},
+    timeout=30,
+)
+
+span_processor = BatchSpanProcessor(
+    exporter,
+    max_queue_size=1000,
+    max_export_batch_size=1000,
+)
+tracer_provider.add_span_processor(span_processor)
+
+tracer = trace.get_tracer(__name__)
+
 
 from flask import Flask, request, jsonify
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from dapr.ext.workflow import DaprWorkflowClient, DaprWorkflowContext, WorkflowActivityContext, WorkflowRuntime
 
 wfr = WorkflowRuntime()
@@ -14,6 +44,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('Workflows')
 
 app = Flask(__name__)
+FlaskInstrumentor().instrument_app(app)
 
 @app.route('/healthz', methods=['GET'])
 def health_check():
@@ -78,8 +109,9 @@ def test_workflow(ctx: DaprWorkflowContext, wf_input: str):
 
 @wfr.activity
 def random_number_generator(ctx: WorkflowActivityContext):
-    logger.debug(f'Random number activity started')
-    number = random.randint(0, 100000)
+    logger.debug('Random number activity started')
+    with tracer.start_as_current_span(name='IN-ACTIVITY'):
+        number = random.randint(0, 100000)
     logger.debug(f'Random number activity completed. Number: {number}')
     return number
 
