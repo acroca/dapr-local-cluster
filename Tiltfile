@@ -1,4 +1,6 @@
-load('./tools/dapr/Tiltfile', 'dapr')
+allow_k8s_contexts('kind-kind')
+
+load('./tools/dapr/Tiltfile', 'dapr', 'dapr_config_component')
 load('./tools/zipkin/Tiltfile', 'zipkin')
 load('./tools/redis/Tiltfile', 'redis', 'redis_pubsub_component', 'redis_state_component', 'redis_workflowstate_component')
 load('./tools/postgres/Tiltfile', 'postgres', 'postgres_state_component', 'postgres_workflowstate_component')
@@ -9,6 +11,7 @@ local('helm repo update')
 zipkin()
 # dapr("dev")
 dapr("1.16.6")
+dapr_config_component(zipkin_endpoint='http://zipkin.default.svc.cluster.local:9411/api/v2/spans')
 
 redis()
 # postgres()

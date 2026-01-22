@@ -40,7 +40,7 @@ depends = ['cluster-down', 'cluster-up']
 
 [tasks.tilt-up]
 run = [
-  'tilt up',
+  'tilt up --context kind-kind',
 ]
 
 [tasks.tilt-up-e2e]
