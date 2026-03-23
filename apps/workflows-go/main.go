@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dapr/durabletask-go/workflow"
 	dapr "github.com/dapr/go-sdk/client"
-	"github.com/dapr/go-sdk/workflow"
 )
 
 var wfClient *workflow.Client
@@ -72,7 +72,7 @@ func startWorkflowHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Starting workflow with input: %s", workflowInput)
 
 	// Start workflow
-	id, err := wfClient.ScheduleNewWorkflow(context.Background(), "TestWorkflow", workflow.WithInput(workflowInput))
+	id, err := wfClient.ScheduleWorkflow(context.Background(), "TestWorkflow", workflow.WithInput(workflowInput))
 	if err != nil {
 		log.Printf("Error starting workflow: %v", err)
 		response := WorkflowResponse{
@@ -132,7 +132,7 @@ func startWorkflowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if respFetch.RuntimeStatus.String() != "COMPLETED" {
+	if respFetch.RuntimeStatus.String() != "ORCHESTRATION_STATUS_COMPLETED" {
 		log.Printf("Workflow failed! Status: %s", respFetch.RuntimeStatus.String())
 		response := WorkflowResponse{
 			Status:     "failed",
@@ -145,11 +145,11 @@ func startWorkflowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Workflow completed! Result: %s", string(respFetch.SerializedOutput))
+	log.Printf("Workflow completed! Result: %s", string(respFetch.Output.GetValue()))
 	response := WorkflowResponse{
 		Status:     "completed",
 		InstanceID: id,
-		Result:     string(respFetch.SerializedOutput),
+		Result:     respFetch.Output.GetValue(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -157,34 +157,24 @@ func startWorkflowHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// Create and start workflow worker
-	w, err := workflow.NewWorker()
-	if err != nil {
-		log.Fatalf("failed to start worker: %v", err)
-	}
-
-	if err := w.RegisterWorkflow(TestWorkflow); err != nil {
-		log.Fatal(err)
-	}
-	if err := w.RegisterActivity(TestActivity); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := w.Start(); err != nil {
-		log.Fatal(err)
-	}
-
-	// Create Dapr client
 	client, err := dapr.NewClient()
 	if err != nil {
 		panic(err)
 	}
 	defer client.Close()
+	// Create and start workflow worker
+	wfClient = workflow.NewClient(client.GrpcClientConn())
 
-	// Create workflow client
-	wfClient, err = workflow.NewClient(workflow.WithDaprClient(client))
-	if err != nil {
-		log.Fatalf("failed to initialise workflow client: %v", err)
+	reg := workflow.NewRegistry()
+
+	if err := reg.AddWorkflow(TestWorkflow); err != nil {
+		log.Fatal(err)
+	}
+	if err := reg.AddActivity(TestActivity); err != nil {
+		log.Fatal(err)
+	}
+	if err := wfClient.StartWorker(context.Background(), reg); err != nil {
+		log.Fatal(err)
 	}
 
 	// Setup HTTP routes
@@ -204,13 +194,27 @@ func main() {
 
 func TestWorkflow(ctx *workflow.WorkflowContext) (any, error) {
 	var number int
-	err := ctx.CallActivity(TestActivity).Await(&number)
+	sum := 0
+	a1 := ctx.CallActivity(TestActivity)
+	a2 := ctx.CallActivity(TestActivity)
+	err := a1.Await(&number)
 	if err != nil {
 		return nil, err
 	}
-	return "Workflow completed with number: " + strconv.Itoa(number), nil
+	sum += number
+
+	err = a2.Await(&number)
+	if err != nil {
+		return nil, err
+	}
+	sum += number
+
+	ctx.WaitForExternalEvent("foo", -1).Await(nil)
+
+	return "Workflow completed with sum: " + strconv.Itoa(sum), nil
 }
 
 func TestActivity(ctx workflow.ActivityContext) (any, error) {
+	time.Sleep(1 * time.Second)
 	return rand.Intn(100000), nil
 }
