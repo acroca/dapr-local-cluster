@@ -1,0 +1,11 @@
+# Dedicated Dapr Configuration for this app with component hot-reloading enabled.
+# This is the feature under test: components should reload when their referenced
+# secret changes. Adjust the feature name here if your build gates it differently.
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: secrets-py-config
+spec:
+  features:
+  - name: HotReload
+    enabled: true

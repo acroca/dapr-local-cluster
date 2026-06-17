@@ -1,0 +1,30 @@
+# Issue #9379 repro: ServiceAccount + Role + RoleBinding for repro-sa.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: repro-sa
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-creator
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: repro-sa-pods
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pod-creator
+subjects:
+  - kind: ServiceAccount
+    name: repro-sa
+    namespace: default

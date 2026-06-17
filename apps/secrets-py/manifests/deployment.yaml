@@ -1,39 +1,42 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: workflows-py
+  name: secrets-py
   labels:
-    app: workflows-py
+    app: secrets-py
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: workflows-py
+      app: secrets-py
   template:
     metadata:
       labels:
-        app: workflows-py
+        app: secrets-py
       annotations:
         dapr.io/enabled: "true"
-        dapr.io/app-id: "workflows-py"
-        dapr.io/config: "daprconfig"
+        dapr.io/app-id: "secrets-py"
         dapr.io/app-port: "6005"
-        dapr.io/app-protocol: "http"
-        dapr.io/enable-app-health-check: "true"
-        dapr.io/env: "OTEL_SERVICE_NAME=daprd"
-        dapr.io/app-max-concurrency: "1000"
+        dapr.io/config: "secrets-py-config"
+        dapr.io/log-level: "debug"
     spec:
       terminationGracePeriodSeconds: 0
       containers:
-      - name: workflows-py
-        image: localhost:5001/workflows-py:latest
+      - name: secrets-py
+        image: localhost:5001/secrets-py:latest
         ports:
         - containerPort: 6005
         env:
         - name: APP_PORT
           value: "6005"
+        - name: STATE_STORE_NAME
+          value: "secret-statestore"
+        - name: STATE_KEY
+          value: "mykey"
+        - name: LOOP_INTERVAL_SECONDS
+          value: "5"
         resources:
           limits:
             cpu: "0.5"

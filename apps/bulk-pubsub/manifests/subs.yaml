@@ -1,0 +1,13 @@
+apiVersion: dapr.io/v2alpha1
+kind: Subscription
+metadata:
+  name: test
+spec:
+  topic: test
+  routes:
+    default: /batch
+  pubsubname: pubsub
+  bulkSubscribe:
+    enabled: true
+    maxMessagesCount: 10
+    maxAwaitDurationMs: 10000

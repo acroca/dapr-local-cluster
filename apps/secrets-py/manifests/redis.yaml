@@ -1,0 +1,49 @@
+# Dedicated, password-protected Redis JUST for the secrets-py state store.
+# Unlike the shared redis-master (ALLOW_EMPTY_PASSWORD, no auth), this instance
+# enforces `--requirepass`, so a wrong client password is actually rejected.
+# That is what makes the secret hot-reload test meaningful: redis-secret starts
+# with this same password (calls succeed); flip it to a wrong value and AUTH
+# fails (calls error), proving the new secret value took effect.
+#
+# Plain redis image (no RedisJSON): Dapr's state.redis store only needs basic
+# Redis commands, and requirepass is trivial to set via args here.
+#
+# Keep `--requirepass` in sync with redis-password in manifests/secret.yaml.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secret-redis
+  namespace: default
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: secret-redis
+  template:
+    metadata:
+      labels:
+        app: secret-redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        args: ["--requirepass", "correct-password"]
+        ports:
+        - containerPort: 6379
+        resources:
+          limits:
+            cpu: "0.1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: secret-redis
+  namespace: default
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: secret-redis

@@ -1,0 +1,63 @@
+load('ext://uibutton', 'cmd_button')
+
+# gRPC actors playground (Python)
+docker_build('localhost:5001/actors-grpc-py', '.')
+k8s_yaml('manifests/deployment.yaml')
+k8s_resource(
+  workload='actors-grpc-py',
+  resource_deps=['dapr', 'statestore'],
+  labels=['apps'],
+  # 3511 -> daprd HTTP API, to invoke the actor with curl
+  port_forwards=['3511:3500'],
+)
+
+actor_url = 'http://localhost:3511/v1.0/actors/PlaygroundActor/demo/method'
+
+cmd_button('actors-grpc-py:hello',
+            argv=['sh', '-c', 'curl --silent -X POST %s/Hello -H "Content-Type: application/json" -d \'"world"\'' % actor_url],
+            resource='actors-grpc-py',
+            icon_name='waving_hand',
+            text='hello',
+)
+
+cmd_button('actors-grpc-py:set-data',
+            argv=['sh', '-c', 'curl --silent -X POST %s/SetData -H "Content-Type: application/json" -d \'{"value": 42}\'' % actor_url],
+            resource='actors-grpc-py',
+            icon_name='save',
+            text='set data',
+)
+
+cmd_button('actors-grpc-py:get-data',
+            argv=['sh', '-c', 'curl --silent -X POST %s/GetData' % actor_url],
+            resource='actors-grpc-py',
+            icon_name='cloud_download',
+            text='get data',
+)
+
+cmd_button('actors-grpc-py:start-reminder',
+            argv=['sh', '-c', 'curl --silent -X POST %s/StartReminder' % actor_url],
+            resource='actors-grpc-py',
+            icon_name='hourglass_full',
+            text='start reminder',
+)
+
+cmd_button('actors-grpc-py:stop-reminder',
+            argv=['sh', '-c', 'curl --silent -X POST %s/StopReminder' % actor_url],
+            resource='actors-grpc-py',
+            icon_name='hourglass_empty',
+            text='stop reminder',
+)
+
+cmd_button('actors-grpc-py:start-timer',
+            argv=['sh', '-c', 'curl --silent -X POST %s/StartTimer' % actor_url],
+            resource='actors-grpc-py',
+            icon_name='timer',
+            text='start timer',
+)
+
+cmd_button('actors-grpc-py:stop-timer',
+            argv=['sh', '-c', 'curl --silent -X POST %s/StopTimer' % actor_url],
+            resource='actors-grpc-py',
+            icon_name='timer_off',
+            text='stop timer',
+)

@@ -1,0 +1,14 @@
+load('ext://uibutton', 'cmd_button')
+
+# Workflows service (Go)
+docker_build('localhost:5001/bulk-pubsub', '.')
+k8s_yaml('manifests/deployment.yaml')
+k8s_yaml('manifests/subs.yaml')
+k8s_resource(workload='bulk-pubsub', resource_deps=['dapr'], labels=['apps'], port_forwards=['6006:6006'])
+
+cmd_button('bulk-pubsub:start',
+            argv=['sh', '-c', 'curl --silent -X POST http://localhost:6006/start'],
+            resource='bulk-pubsub',
+            icon_name='cloud_download',
+            text='start workflow',
+)

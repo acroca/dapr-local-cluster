@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bulk-pubsub
+  labels:
+    app: bulk-pubsub
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bulk-pubsub
+  template:
+    metadata:
+      labels:
+        app: bulk-pubsub
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "bulk-pubsub"
+        dapr.io/app-port: "6006"
+        dapr.io/config: "daprconfig"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: bulk-pubsub
+        image: localhost:5001/bulk-pubsub:latest
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"

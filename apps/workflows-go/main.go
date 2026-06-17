@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/dapr/durabletask-go/workflow"
@@ -71,6 +69,7 @@ func startWorkflowHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Starting workflow with input: %s", workflowInput)
 
+	scheduled := time.Now()
 	// Start workflow
 	id, err := wfClient.ScheduleWorkflow(context.Background(), "TestWorkflow", workflow.WithInput(workflowInput))
 	if err != nil {
@@ -144,8 +143,8 @@ func startWorkflowHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-
-	log.Printf("Workflow completed! Result: %s", string(respFetch.Output.GetValue()))
+	elapsed := time.Since(scheduled)
+	log.Printf("Workflow completed in %v ms! Result: %s", elapsed.Milliseconds(), string(respFetch.Output.GetValue()))
 	response := WorkflowResponse{
 		Status:     "completed",
 		InstanceID: id,
@@ -170,9 +169,6 @@ func main() {
 	if err := reg.AddWorkflow(TestWorkflow); err != nil {
 		log.Fatal(err)
 	}
-	if err := reg.AddActivity(TestActivity); err != nil {
-		log.Fatal(err)
-	}
 	if err := wfClient.StartWorker(context.Background(), reg); err != nil {
 		log.Fatal(err)
 	}
@@ -193,28 +189,5 @@ func main() {
 }
 
 func TestWorkflow(ctx *workflow.WorkflowContext) (any, error) {
-	var number int
-	sum := 0
-	a1 := ctx.CallActivity(TestActivity)
-	a2 := ctx.CallActivity(TestActivity)
-	err := a1.Await(&number)
-	if err != nil {
-		return nil, err
-	}
-	sum += number
-
-	err = a2.Await(&number)
-	if err != nil {
-		return nil, err
-	}
-	sum += number
-
-	ctx.WaitForExternalEvent("foo", -1).Await(nil)
-
-	return "Workflow completed with sum: " + strconv.Itoa(sum), nil
-}
-
-func TestActivity(ctx workflow.ActivityContext) (any, error) {
-	time.Sleep(1 * time.Second)
-	return rand.Intn(100000), nil
+	return nil, ctx.CreateTimer(3 * time.Second).Await(nil)
 }

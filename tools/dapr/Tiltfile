@@ -4,9 +4,9 @@ load('../component/Tiltfile', 'component')
 k8s_kind('Component', pod_readiness='ignore')
 k8s_kind('Configuration', pod_readiness='ignore')
 
-def dapr_dev():
+def dapr_dev(directory='dapr'):
   local_resource('dapr-images',
-                dir='../dapr',
+                dir='../%s' % directory,
                 cmd='mise exec dapr@1.16 -- dapr uninstall -k && make build docker-push',
                 env={
                   'HA_MODE': 'true',
@@ -22,7 +22,7 @@ def dapr_dev():
                 },
                 labels=['core'])
 
-  helm_resource('dapr', '../dapr/charts/dapr',
+  helm_resource('dapr', '../%s/charts/dapr' % directory,
               release_name='dapr',
               flags=[
                   '--set', 'global.ha.enabled=true',
@@ -52,8 +52,8 @@ def dapr_release(version='1.16.2'):
   helm_resource('dapr', 'dapr/dapr',
     release_name='dapr',
     flags=[
-      '--set', 'global.ha.enabled=true',
-      '--set', 'global.mtls.enabled=true',
+      # '--set', 'global.ha.enabled=true',
+      # '--set', 'global.mtls.enabled=true',
       '--version', version,
     ],
     resource_deps=['dapr-helm-repo'],
@@ -61,9 +61,9 @@ def dapr_release(version='1.16.2'):
 
 
 
-def dapr(version='dev'):
+def dapr(version='dev', directory='dapr'):
   if version == 'dev':
-    dapr_dev()
+    dapr_dev(directory)
   else:
     dapr_release(version)
 

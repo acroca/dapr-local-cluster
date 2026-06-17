@@ -1,0 +1,1 @@
+dapr @ git+https://github.com/acroca/dapr-python-sdk.git@grpc-actors

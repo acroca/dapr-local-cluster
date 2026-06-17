@@ -1,39 +1,38 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: workflows-py
+  name: actors-grpc-py
   labels:
-    app: workflows-py
+    app: actors-grpc-py
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: workflows-py
+      app: actors-grpc-py
   template:
     metadata:
       labels:
-        app: workflows-py
+        app: actors-grpc-py
       annotations:
         dapr.io/enabled: "true"
-        dapr.io/app-id: "workflows-py"
+        dapr.io/app-id: "actors-grpc-py"
         dapr.io/config: "daprconfig"
-        dapr.io/app-port: "6005"
-        dapr.io/app-protocol: "http"
-        dapr.io/enable-app-health-check: "true"
+        dapr.io/app-port: "6011"
+        dapr.io/app-protocol: "grpc"
         dapr.io/env: "OTEL_SERVICE_NAME=daprd"
-        dapr.io/app-max-concurrency: "1000"
+        # dapr.io/log-level: "debug"
     spec:
       terminationGracePeriodSeconds: 0
       containers:
-      - name: workflows-py
-        image: localhost:5001/workflows-py:latest
+      - name: actors-grpc-py
+        image: localhost:5001/actors-grpc-py:latest
         ports:
-        - containerPort: 6005
+        - containerPort: 6011
         env:
         - name: APP_PORT
-          value: "6005"
+          value: "6011"
         resources:
           limits:
             cpu: "0.5"

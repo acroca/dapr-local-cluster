@@ -1,6 +1,6 @@
-dapr-ext-grpc>=1.17.0rc2
-dapr-ext-workflow>=1.17.0rc2
-dapr>=1.17.0rc2
+dapr-ext-grpc>=1.17.4
+dapr-ext-workflow>=1.17.4
+dapr>=1.17.4
 flask>=2.3.0
 opentelemetry-instrumentation-flask>=0.60b1
 opentelemetry-instrumentation-grpc>=0.60b1

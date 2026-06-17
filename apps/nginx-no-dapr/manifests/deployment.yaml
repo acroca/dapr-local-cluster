@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nginx-no-dapr
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-no-dapr
+  labels:
+    app: nginx-no-dapr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-no-dapr
+  template:
+    metadata:
+      labels:
+        app: nginx-no-dapr
+      # No dapr.io/enabled annotation — this pod is intentionally NOT using Dapr.
+      # Used to reproduce dapr/dapr#9379: the injector incorrectly logs an error
+      # and increments dapr_injector_sidecar_injection_failed_total for pods like
+      # this one, because it checks allowedServiceAccounts before checking the
+      # dapr.io/enabled annotation.
+    spec:
+      serviceAccountName: nginx-no-dapr
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: nginx
+        image: nginx:stable-alpine
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: "0.2"
+            memory: "64Mi"
+          requests:
+            cpu: "0.05"
+            memory: "32Mi"

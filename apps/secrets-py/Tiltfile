@@ -1,0 +1,46 @@
+load('ext://uibutton', 'cmd_button')
+
+# Dedicated, password-protected Redis for this app, a dedicated Dapr Configuration
+# (HotReload enabled), the referenced Secret + RBAC, and the Redis state store
+# whose redisPassword comes from that Secret.
+k8s_yaml('manifests/redis.yaml')
+k8s_resource(workload='secret-redis', labels=['components'], port_forwards=['6380:6379'])
+
+k8s_yaml('manifests/config.yaml')
+k8s_resource(workload='secrets-py-config', labels=['components'], resource_deps=['dapr'])
+
+k8s_yaml('manifests/secret.yaml')
+
+k8s_yaml('manifests/statestore.yaml')
+k8s_resource(workload='secret-statestore', labels=['components'], resource_deps=['dapr', 'secret-redis'])
+
+docker_build('localhost:5001/secrets-py', '.')
+k8s_yaml('manifests/deployment.yaml')
+k8s_resource(workload='secrets-py', resource_deps=['dapr', 'secret-redis'], labels=['apps'], port_forwards=['6005:6005'])
+
+# Trigger a single save/get against the secret-backed state store.
+cmd_button('secrets-py:invoke',
+            argv=['sh', '-c', 'curl --silent -X POST http://localhost:6005/invoke'],
+            resource='secrets-py',
+            icon_name='play_arrow',
+            text='invoke state store',
+)
+
+# Patch the referenced secret to a WRONG redis password. With hot-reload working,
+# the component reloads (on the daprd reconciler's periodic poll, ~60s) and the
+# loop/invoke calls start failing with a Redis AUTH error (watch the secrets-py
+# app log flip from OK to ERROR).
+cmd_button('secrets-py:bad-password',
+            argv=['sh', '-c', 'kubectl patch secret redis-secret -n default --type merge -p \'{"stringData":{"redis-password":"wrong-password"}}\''],
+            resource='secrets-py',
+            icon_name='lock',
+            text='set bad password',
+)
+# Restore the referenced secret to the CORRECT password (must match
+# --requirepass in manifests/redis.yaml). After reload, calls succeed again.
+cmd_button('secrets-py:good-password',
+            argv=['sh', '-c', 'kubectl patch secret redis-secret -n default --type merge -p \'{"stringData":{"redis-password":"correct-password"}}\''],
+            resource='secrets-py',
+            icon_name='lock_open',
+            text='restore password',
+)
